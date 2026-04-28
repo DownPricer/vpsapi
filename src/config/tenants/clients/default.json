@@ -1,0 +1,30 @@
+{
+  "id": "default",
+  "engineRef": "default",
+  "company": {
+    "name": "Transport exemple",
+    "legalName": "Transport exemple SARL",
+    "legal": {}
+  },
+  "baseAddress": {
+    "label": "Paris, France",
+    "country": "FR"
+  },
+  "serviceArea": {
+    "description": "Île-de-France et périphérie (exemple)",
+    "regions": ["IDF"]
+  },
+  "pricing": {
+    "notes": "Moteur default.engine.json — base opérationnelle = baseAddress.label",
+    "strategyId": "engine-json"
+  },
+  "airports": [],
+  "smtp": {
+    "toEmail": "contact@sitereadyshd.fr",
+    "fromName": "Transport exemple",
+    "fromEmail": "contact@sitereadyshd.fr"
+  },
+  "branding": {
+    "siteUrl": "https://example.com"
+  }
+}

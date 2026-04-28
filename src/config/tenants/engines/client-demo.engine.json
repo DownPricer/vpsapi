@@ -1,0 +1,109 @@
+{
+  "timezone": "Europe/Paris",
+  "publicHolidays": [
+    "01/01/2025",
+    "14/04/2025",
+    "01/05/2025",
+    "08/05/2025",
+    "22/05/2025",
+    "02/06/2025",
+    "14/07/2025",
+    "15/08/2025",
+    "01/11/2025",
+    "11/11/2025",
+    "25/12/2025",
+    "01/01/2026",
+    "06/04/2026",
+    "01/05/2026",
+    "08/05/2026",
+    "14/05/2026",
+    "25/05/2026",
+    "14/07/2026",
+    "15/08/2026",
+    "01/11/2026",
+    "11/11/2026",
+    "25/12/2026"
+  ],
+  "airportBuffers": {
+    "default": { "preFlightMin": 115, "arrivalMin": 28, "dropoffMarginMin": 10 },
+    "ORY": { "preFlightMin": 115, "arrivalMin": 28, "dropoffMarginMin": 10 },
+    "CDG": { "preFlightMin": 145, "arrivalMin": 33, "dropoffMarginMin": 10 },
+    "BVA": { "preFlightMin": 115, "arrivalMin": 42, "dropoffMarginMin": 10 },
+    "CC": { "preFlightMin": 85, "arrivalMin": 15, "dropoffMarginMin": 5 }
+  },
+  "airports": {
+    "ORY": {
+      "names": ["ory", "orly", "paris orly", "paris-orly"],
+      "address": "Aéroport de Paris-Orly, 94390 Orly, France"
+    },
+    "CDG": {
+      "names": ["cdg", "roissy", "charles de gaulle", "charles-de-gaulle", "paris cdg", "paris-cdg"],
+      "address": "Aéroport Charles de Gaulle, 95700 Roissy-en-France, France"
+    },
+    "BVA": {
+      "names": ["bva", "beauvais", "paris beauvais", "paris-beauvais", "beauvais-tillé", "tille", "tillé"],
+      "address": "Aéroport de Beauvais-Tillé, Route de l'Aéroport, 60000 Tillé, France"
+    },
+    "CC": {
+      "names": ["cc", "caen", "carpiquet", "caen-carpiquet"],
+      "address": "Aéroport de Caen-Carpiquet, 14650 Carpiquet, France"
+    }
+  },
+  "taTable": {
+    "ORY": {
+      "SIMPLE": { "1-2": { "tarifKm": 0.56, "min": 235 }, "3-4": { "tarifKm": 0.6, "min": 245 } },
+      "ALLER_RETOUR": { "1-2": { "tarifKm": 0.56, "min": 460 }, "3-4": { "tarifKm": 0.6, "min": 480 } }
+    },
+    "CDG": {
+      "SIMPLE": { "1-2": { "tarifKm": 0.55, "min": 240 }, "3-4": { "tarifKm": 0.59, "min": 250 } },
+      "ALLER_RETOUR": { "1-2": { "tarifKm": 0.55, "min": 470 }, "3-4": { "tarifKm": 0.59, "min": 490 } }
+    },
+    "BVA": {
+      "SIMPLE": { "1-2": { "tarifKm": 0.63, "min": 225 }, "3-4": { "tarifKm": 0.63, "min": 235 } },
+      "ALLER_RETOUR": { "1-2": { "tarifKm": 0.63, "min": 450 }, "3-4": { "tarifKm": 0.63, "min": 470 } }
+    },
+    "CC": {
+      "SIMPLE": { "1-2": { "tarifKm": 0.65, "min": 170 }, "3-4": { "tarifKm": 0.65, "min": 185 } },
+      "ALLER_RETOUR": { "1-2": { "tarifKm": 0.65, "min": 340 }, "3-4": { "tarifKm": 0.65, "min": 370 } }
+    }
+  },
+  "tcTable": {
+    "SIMPLE": {
+      "ZONES": {
+        "1": { "min": 32, "tarifsKm": { "1-50": 2.0, "51-90": 1.8, "91-150": 1.6, "+150": 1.4 } },
+        "2": { "min": 62, "tarifsKm": { "1-50": 2.0, "51-90": 1.8, "91-150": 1.6, "+150": 1.4 } },
+        "3": { "min": 145, "tarifsKm": { "1-50": 2.2, "51-90": 2.0, "91-150": 1.8, "+150": 1.5 } },
+        "4": { "min": 185, "tarifsKm": { "1-50": 2.2, "51-90": 2.0, "91-150": 1.8, "+150": 1.5 } },
+        "5": { "min": 310, "tarifsKm": { "51-90": 2.0, "91-200": 1.8, "+200": 1.6 } }
+      },
+      "APPROCHE": 0.5
+    },
+    "AR": {
+      "ZONES": {
+        "1": { "min": 62, "tarifsKm": { "1-50": 2.0, "51-90": 1.8, "91-150": 1.6, "+150": 1.4 } },
+        "2": { "min": 125, "tarifsKm": { "1-50": 2.0, "51-90": 1.8, "91-150": 1.6, "+150": 1.4 } },
+        "3": { "min": 255, "tarifsKm": { "1-50": 2.2, "51-90": 2.0, "91-150": 1.8, "+150": 1.5 } },
+        "4": { "min": 355, "tarifsKm": { "1-50": 2.2, "51-90": 2.0, "91-150": 1.8, "+150": 1.5 } },
+        "5": { "min": 510, "tarifsKm": { "51-90": 2.0, "91-200": 1.8, "+200": 1.6 } }
+      },
+      "APPROCHE": 0.5
+    }
+  },
+  "maj": {
+    "pctNight": 0.22,
+    "pctEvening": 0.12,
+    "pctWE": 0.22,
+    "pctFerie": 0.28,
+    "minEuros": 0
+  },
+  "applyArDiscount": true,
+  "outOfPrimaryServiceZoneMultiplier": 1.08,
+  "primaryServiceZoneSetId": "fr-76",
+  "madHourlyRates": {
+    "default": 85,
+    "eveningOrNight": 105,
+    "weekendOrHoliday": 128
+  },
+  "madEventMinimumTotal": 220,
+  "calendarEventTitlePrefix": "VTC client démo"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "client-demo",
+  "engineRef": "client-demo",
+  "company": {
+    "name": "Démo client B",
+    "legalName": "Démo client B SAS"
+  },
+  "baseAddress": {
+    "label": "Rouen, France",
+    "city": "Rouen",
+    "postalCode": "76000",
+    "country": "FR",
+    "coordinates": { "lat": 49.4431, "lng": 1.0993 }
+  },
+  "serviceArea": {
+    "description": "Normandie — moteur tarifaire distinct (client-demo.engine.json)",
+    "regions": ["76", "27"]
+  },
+  "pricing": {
+    "notes": "Grilles et MAD différents du tenant default",
+    "strategyId": "engine-json"
+  },
+  "airports": [
+    { "code": "CDG", "name": "Paris Charles-de-Gaulle" },
+    { "code": "ORY", "name": "Paris Orly" }
+  ],
+  "smtp": {
+    "toEmail": "bookings-demo@example.com",
+    "fromName": "Démo client B"
+  },
+  "branding": {
+    "siteUrl": "https://demo.example.com"
+  }
+}

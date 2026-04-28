@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OperatorRole {
+  admin
+  agent
+}
+
+enum LeadKind {
+  contact
+  devis
+  reservation
+}
+
+enum LeadStatus {
+  new
+  pending
+  accepted
+  refused
+  processed
+  archived
+  scheduled
+  completed
+  cancelled
+  expired
+}
+
+model Tenant {
+  id            String              @id
+  name          String
+  slug          String              @unique
+  active        Boolean             @default(true)
+  configRef     String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  users         OperatorUser[]
+  leads         LeadRequest[]
+  statusHistory LeadStatusHistory[]
+  authSessions  AuthSession[]
+}
+
+model OperatorUser {
+  id           String         @id @default(cuid())
+  tenantId     String
+  email        String
+  passwordHash String
+  role         OperatorRole   @default(agent)
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions     AuthSession[]
+  changedLeads LeadStatusHistory[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model LeadRequest {
+  id            String              @id @default(cuid())
+  tenantId      String
+  kind          LeadKind
+  status        LeadStatus
+  clientName    String
+  clientPhone   String
+  clientEmail   String
+  rawPayload    Json
+  flatPayload   Json
+  pricingResult Json?
+  sourceSite    String?
+  scheduledStart DateTime?
+  scheduledEnd  DateTime?
+  acceptedAt    DateTime?
+  refusedAt     DateTime?
+  operatorNote  String?
+  emailSentAt   DateTime?
+  emailError    String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  history       LeadStatusHistory[]
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, kind, status])
+  @@index([tenantId, scheduledStart])
+}
+
+model LeadStatusHistory {
+  id              String       @id @default(cuid())
+  leadId           String
+  tenantId         String
+  previousStatus   LeadStatus?
+  newStatus        LeadStatus
+  changedByUserId  String?
+  note             String?
+  createdAt        DateTime     @default(now())
+  lead             LeadRequest  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  changedByUser    OperatorUser? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([leadId, createdAt(sort: Desc)])
+}
+
+model AuthSession {
+  id               String      @id @default(cuid())
+  tenantId         String
+  userId           String
+  refreshTokenHash String
+  expiresAt        DateTime
+  createdAt        DateTime    @default(now())
+  revokedAt        DateTime?
+  replacedById     String?
+  ip               String?
+  userAgent        String?
+  tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user             OperatorUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([expiresAt])
+}
