@@ -79,6 +79,10 @@ export class ReservationService {
         tenant,
         {
           ...lead,
+          LeadId: created.id,
+          TypeDemande: "reservation",
+          Statut: created.status,
+          Societe: lead.NomSociete || "",
           DashboardLink: `${process.env.DASHBOARD_BASE_URL || "https://app.sitereadyshd.fr"}/pro/demandes/${created.id}`,
         },
         client.email,

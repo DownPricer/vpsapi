@@ -52,6 +52,10 @@ export class ContactService {
     try {
       await sendContactLeadEmail(tenant, {
         ...lead,
+        LeadId: created.id,
+        TypeDemande: "contact",
+        Statut: created.status,
+        Societe: lead.NomSociete || "",
         DashboardLink: `${process.env.DASHBOARD_BASE_URL || "https://app.sitereadyshd.fr"}/pro/demandes/${created.id}`,
       }, lead.Email);
       await this.requestService.markEmailResult(created.id, tenant.id, true);
