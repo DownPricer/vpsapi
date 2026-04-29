@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { LeadKind, LeadStatus } from "@prisma/client";
 import { z } from "zod";
+import { sendCustomerDecisionMail } from "../modules/email/customerDecisionMail";
 import { RequestService } from "../services/request.service";
 
 const requestService = new RequestService();
@@ -69,18 +70,31 @@ export async function patchRequestStatus(req: Request, res: Response, next: Next
     return;
   }
   try {
-    const updated = await requestService.updateStatus({
+    const result = await requestService.updateStatus({
       tenantId: req.tenantId,
       leadId: req.params.id,
       nextStatus: parsed.data.status,
       changedByUserId: req.authUser.id,
       note: parsed.data.note,
     });
-    if (!updated) {
+    if (!result) {
       res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Demande introuvable." } });
       return;
     }
-    res.json({ success: true, data: updated });
+    if (result.noop) {
+      res.json({ success: true, data: result.lead, meta: { unchanged: true } });
+      return;
+    }
+    const customerNotification = await sendCustomerDecisionMail({
+      tenant: req.tenant,
+      lead: result.lead,
+    });
+    const fresh = await requestService.getById(req.tenantId, result.lead.id);
+    res.json({
+      success: true,
+      data: fresh ?? result.lead,
+      meta: { unchanged: false, customerNotification },
+    });
   } catch (e) {
     next(e);
   }

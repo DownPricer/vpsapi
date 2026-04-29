@@ -548,3 +548,97 @@ ${usefulLines.length ? `<p style="margin:0 0 8px;font-size:13px;font-weight:700;
 
   return { subject, html, text: bodyText };
 }
+
+function decisionSummaryLines(lines: string[]): string[] {
+  return lines.filter(summaryLineIsUseful);
+}
+
+/** E-mails client suite à acceptation / refus depuis le dashboard (devis ou réservation). */
+export function buildCustomerDecisionEmail(opts: {
+  tenant: TenantConfig;
+  kind: "devis" | "reservation";
+  outcome: "accepted" | "refused";
+  recipientName: string;
+  summaryLines: string[];
+  operatorNote?: string | null;
+}): { subject: string; html: string; text: string } {
+  const brand = brandName(opts.tenant);
+  const site = publicSiteUrl(opts.tenant);
+  const useful = decisionSummaryLines(opts.summaryLines);
+
+  const devis = opts.kind === "devis";
+  const accept = opts.outcome === "accepted";
+
+  const subject = accept
+    ? devis
+      ? `${brand} — Votre demande de devis a été acceptée`
+      : `${brand} — Votre réservation a été acceptée`
+    : devis
+      ? `${brand} — Réponse à votre demande de devis`
+      : `${brand} — Réponse à votre réservation`;
+
+  const p1 = accept
+    ? devis
+      ? "Votre demande de devis a été acceptée."
+      : "Votre réservation a été acceptée."
+    : devis
+      ? "Votre demande de devis ne peut pas être acceptée."
+      : "Votre réservation ne peut pas être acceptée.";
+
+  const p2 = accept
+    ? devis
+      ? "Vous pouvez contacter votre chauffeur ou notre équipe pour finaliser les détails si nécessaire."
+      : "Votre chauffeur a bien pris en compte votre demande."
+    : "Vous pouvez nous contacter pour plus d’informations ou effectuer une nouvelle demande sur notre site.";
+
+  let noteBlockHtml = "";
+  let noteBlockText = "";
+  if (
+    opts.operatorNote &&
+    isMeaningfulValue(opts.operatorNote) &&
+    opts.outcome === "refused" &&
+    opts.operatorNote.trim().length <= 800
+  ) {
+    noteBlockHtml = `<p style="margin:16px 0 0;font-size:14px;color:#374151;line-height:1.65;padding:12px;border-radius:10px;background:#f9fafb;border:1px solid #e5e7eb"><strong>Message :</strong><br/>${esc(opts.operatorNote.trim())}</p>`;
+    noteBlockText = `\n\nMessage :\n${opts.operatorNote.trim()}`;
+  }
+
+  const linesHtml = useful
+    .map((l) => `<li style="margin:6px 0;color:${THEME.customerText}">${esc(l)}</li>`)
+    .join("");
+  const bodyText = `Bonjour ${opts.recipientName},\n\n${p1}\n${p2}${noteBlockText}${useful.length ? `\n\nRécapitulatif :\n${useful.join("\n")}` : ""}\n\n— ${brand}\n${site}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${esc(subject)}</title>
+</head>
+<body style="margin:0;padding:0;background:${THEME.customerPageBg};font-family:'Segoe UI',Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${THEME.customerPageBg};padding:24px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" style="max-width:560px;background:${THEME.customerCard};border-radius:14px;border:1px solid #e5e7eb;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,0.06)">
+<tr>
+<td style="background:#1e1e1e;color:#fff;padding:20px;text-align:center;border-bottom:4px solid ${THEME.accent}">
+<span style="font-size:22px;font-weight:800;letter-spacing:0.5px">${esc(brand)}</span>
+</td>
+</tr>
+<tr>
+<td style="padding:26px 22px">
+<p style="margin:0 0 14px;font-size:16px;color:${THEME.customerText}">Bonjour ${esc(opts.recipientName)},</p>
+<p style="margin:0 0 12px;font-size:15px;color:#4b5563;line-height:1.65">${esc(p1)}</p>
+<p style="margin:0 0 18px;font-size:15px;color:#4b5563;line-height:1.65">${esc(p2)}</p>
+${noteBlockHtml}
+${useful.length ? `<p style="margin:18px 0 8px;font-size:13px;font-weight:700;color:${THEME.accent};text-transform:uppercase;letter-spacing:0.5px">Récapitulatif</p><ul style="margin:0;padding-left:20px">${linesHtml}</ul>` : ""}
+<p style="margin:22px 0 0;font-size:14px;color:#6b7280">— ${esc(brand)}<br/><a href="${esc(site)}" style="color:${THEME.accent};text-decoration:none;font-weight:600">${esc(site)}</a></p>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return { subject, html, text: bodyText };
+}

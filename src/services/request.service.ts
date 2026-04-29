@@ -1,4 +1,4 @@
-import type { LeadKind, LeadStatus, Prisma } from "@prisma/client";
+import type { LeadKind, LeadRequest, LeadStatus, Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 
 export type CreateLeadInput = {
@@ -102,12 +102,21 @@ export class RequestService {
     nextStatus: LeadStatus;
     changedByUserId: string;
     note?: string;
-  }) {
+  }): Promise<
+    | { ok: true; noop: true; lead: LeadRequest }
+    | { ok: true; noop: false; lead: LeadRequest; previousStatus: LeadStatus }
+    | null
+  > {
     const lead = await prisma.leadRequest.findFirst({
       where: { id: params.leadId, tenantId: params.tenantId },
     });
     if (!lead) return null;
 
+    if (lead.status === params.nextStatus) {
+      return { ok: true, noop: true, lead };
+    }
+
+    const previousStatus = lead.status;
     const now = new Date();
     const updated = await prisma.leadRequest.update({
       where: { id: lead.id },
@@ -127,7 +136,7 @@ export class RequestService {
         note: params.note,
       },
     });
-    return updated;
+    return { ok: true, noop: false, lead: updated, previousStatus };
   }
 
   async updateNote(params: {
@@ -164,27 +173,51 @@ export class RequestService {
     startToday.setHours(0, 0, 0, 0);
     const endToday = new Date(now);
     endToday.setHours(23, 59, 59, 999);
+    const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [pendingCount, acceptedToday, recent] = await Promise.all([
-      prisma.leadRequest.count({
-        where: { tenantId, status: { in: ["pending", "new"] } },
-      }),
-      prisma.leadRequest.count({
-        where: {
-          tenantId,
-          kind: "reservation",
-          status: { in: ["accepted", "scheduled"] },
-          scheduledStart: { gte: startToday, lte: endToday },
-        },
-      }),
-      prisma.leadStatusHistory.findMany({
-        where: { tenantId },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      }),
-    ]);
+    const [pendingCount, acceptedToday, upcomingReservationCount, recentDevisWeekCount, recent] =
+      await Promise.all([
+        prisma.leadRequest.count({
+          where: { tenantId, status: { in: ["pending", "new"] } },
+        }),
+        prisma.leadRequest.count({
+          where: {
+            tenantId,
+            kind: "reservation",
+            status: { in: ["accepted", "scheduled"] },
+            scheduledStart: { gte: startToday, lte: endToday },
+          },
+        }),
+        prisma.leadRequest.count({
+          where: {
+            tenantId,
+            kind: "reservation",
+            status: { in: ["accepted", "scheduled"] },
+            scheduledStart: { gte: now, lte: horizon },
+          },
+        }),
+        prisma.leadRequest.count({
+          where: {
+            tenantId,
+            kind: "devis",
+            createdAt: { gte: weekAgo },
+          },
+        }),
+        prisma.leadStatusHistory.findMany({
+          where: { tenantId },
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        }),
+      ]);
 
-    return { pendingCount, acceptedToday, recent };
+    return {
+      pendingCount,
+      acceptedToday,
+      upcomingReservationCount,
+      recentDevisWeekCount,
+      recent,
+    };
   }
 
   async calendar(tenantId: string, from: Date, to: Date) {

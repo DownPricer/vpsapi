@@ -86,6 +86,9 @@ model LeadRequest {
   operatorNote  String?
   emailSentAt   DateTime?
   emailError    String?
+  /// Dernier accusé / notification envoyé au client suite à une décision opérateur (acceptation / refus).
+  customerDecisionMailSentAt   DateTime?
+  customerDecisionMailLastError String?
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)

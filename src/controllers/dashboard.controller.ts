@@ -2,6 +2,23 @@ import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { RequestService } from "../services/request.service";
 
+export function getDashboardSession(req: Request, res: Response): void {
+  if (!req.authUser) {
+    res.status(401).json({
+      success: false,
+      error: { code: "UNAUTHORIZED", message: "Authentification requise." },
+    });
+    return;
+  }
+  res.json({
+    success: true,
+    data: {
+      operatorEmail: req.authUser.email,
+      tenantName: req.tenant.company.name,
+    },
+  });
+}
+
 const requestService = new RequestService();
 
 export async function getDashboardSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
