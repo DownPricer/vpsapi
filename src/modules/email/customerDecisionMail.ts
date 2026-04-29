@@ -1,36 +1,46 @@
 import type { LeadRequest } from "@prisma/client";
 import type { TenantConfig } from "../../types/tenant";
 import { prisma } from "../../db/prisma";
-import { buildCustomerDecisionEmail } from "./formatLeadEmail";
+import {
+  buildCustomerDecisionEmail,
+  buildOperatorDecisionEmail,
+} from "./formatLeadEmail";
 import { assertSmtpConnection, resolveMailFrom, sendSmtpMessage } from "./smtp";
 
 function meaningfulStr(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   const text = String(value).trim();
   if (!text) return false;
-  const n = text.toLowerCase();
-  return !["n/a", "na", "null", "undefined", "non renseigné", "0", "0.00", "false", "[]", "{}"].includes(n);
+  const normalized = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return !["n/a", "na", "null", "undefined", "non renseigne", "0", "0.00", "false", "[]", "{}"].includes(normalized);
 }
 
 function pickFlat(flat: Record<string, unknown>, keys: string[]): string {
-  for (const k of keys) {
-    const v = flat[k];
-    if (meaningfulStr(v)) return String(v).trim();
+  for (const key of keys) {
+    const value = flat[key];
+    if (meaningfulStr(value)) return String(value).trim();
   }
   return "";
 }
 
-/** Récap client pour les mails décision (pas de tarif à 0 inutile). */
 export function buildDecisionSummaryLines(lead: LeadRequest): string[] {
   const flat = (lead.flatPayload || {}) as Record<string, unknown>;
   const pricing = lead.pricingResult as { tarif?: number } | null | undefined;
   const lines: string[] = [];
-  lines.push(`Référence : ${lead.id}`);
+  lines.push(`Reference : ${lead.id}`);
   const trajet = pickFlat(flat, ["RésuméTrajet", "ResumeTrajet"]);
   if (trajet) lines.push(`Trajet : ${trajet}`);
   const tarif = pricing?.tarif;
   if (tarif !== undefined && tarif !== null && Number(tarif) > 0) {
-    lines.push(`Tarif : ${Number(tarif).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €`);
+    lines.push(
+      `Tarif : ${Number(tarif).toLocaleString("fr-FR", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })} EUR`
+    );
   }
   return lines;
 }
@@ -45,7 +55,6 @@ function recipientDisplayName(lead: LeadRequest): string {
 
 export type CustomerDecisionMailSkippedReason = "wrong_kind_or_status" | "no_client_email";
 
-/** Métadonnée renvoyée au dashboard (pas de secrets SMTP). */
 export type CustomerDecisionMailResult = {
   attempted: boolean;
   sent: boolean;
@@ -56,7 +65,6 @@ export type CustomerDecisionMailResult = {
   operatorError?: string;
 };
 
-/** Notification au client après acceptation / refus dashboard — ne bloque pas le métier si SMTP échoue. */
 export async function sendCustomerDecisionMail(params: {
   tenant: TenantConfig;
   lead: LeadRequest;
@@ -68,57 +76,40 @@ export async function sendCustomerDecisionMail(params: {
 
   const connection = assertSmtpConnection();
   const from = resolveMailFrom(tenant);
-  const decisionLabel = lead.status === "accepted" ? "Accepté" : "Refusé";
-  const kindLabel = lead.kind === "devis" ? "Devis" : lead.kind === "reservation" ? "Réservation" : "Demande";
+  const decisionLabel = lead.status === "accepted" ? "Accepte" : "Refuse";
+  const kindLabel = lead.kind === "devis" ? "Devis" : lead.kind === "reservation" ? "Reservation" : "Demande";
   const baseSite = (tenant.branding?.siteUrl || "").replace(/\/$/, "");
   const proUrl = baseSite ? `${baseSite}/pro/demandes/${lead.id}` : "";
 
   let operatorAttempted = false;
   let operatorSent = false;
   let operatorError = "";
+
   const operatorEmail = tenant.smtp?.toEmail?.trim();
   if (operatorEmail?.includes("@")) {
     operatorAttempted = true;
-    const subject = `${tenant.company.name} — Demande ${lead.status === "accepted" ? "acceptée" : "refusée"}`;
-    const html = `<!DOCTYPE html>
-<html lang="fr">
-<body style="font-family:Segoe UI,Arial,sans-serif;background:#f7f8fa;padding:20px;color:#1f2937">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px">
-    <tr><td><h2 style="margin:0 0 14px 0">${lead.status === "accepted" ? "Demande acceptée" : "Demande refusée"}</h2></td></tr>
-    <tr><td style="font-size:14px;line-height:1.7">
-      <p><strong>Référence :</strong> ${lead.id}</p>
-      <p><strong>Client :</strong> ${lead.clientName || "Non renseigné"}</p>
-      <p><strong>Type :</strong> ${kindLabel}</p>
-      <p><strong>Nouveau statut :</strong> ${decisionLabel}</p>
-      ${proUrl ? `<p><a href="${proUrl}" style="color:#ea580c;font-weight:600;text-decoration:none">Ouvrir la demande dans l'espace pro</a></p>` : ""}
-    </td></tr>
-  </table>
-</body>
-</html>`;
-    const text = [
-      `${lead.status === "accepted" ? "Demande acceptée" : "Demande refusée"}`,
-      `Référence : ${lead.id}`,
-      `Client : ${lead.clientName || "Non renseigné"}`,
-      `Type : ${kindLabel}`,
-      `Nouveau statut : ${decisionLabel}`,
-      proUrl ? `Lien : ${proUrl}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    const operatorMail = buildOperatorDecisionEmail({
+      tenant,
+      leadId: lead.id,
+      kindLabel,
+      statusLabel: decisionLabel,
+      clientName: lead.clientName?.trim() || "Client non renseigne",
+      proUrl,
+    });
     try {
       await sendSmtpMessage({
         connection,
         from,
         to: operatorEmail,
-        subject,
-        html,
-        text,
+        subject: operatorMail.subject,
+        html: operatorMail.html,
+        text: operatorMail.text,
         omitAutoBcc: true,
       });
       operatorSent = true;
-    } catch (e) {
-      operatorError = e instanceof Error ? e.message : String(e);
-      console.error(`[vtc-core-api][mail] échec envoi récap opérateur lead=${lead.id}: ${operatorError}`);
+    } catch (error) {
+      operatorError = error instanceof Error ? error.message : String(error);
+      console.error(`[vtc-core-api][mail] echec envoi recap operateur lead=${lead.id}: ${operatorError}`);
     }
   }
 
@@ -129,14 +120,14 @@ export async function sendCustomerDecisionMail(params: {
       skippedReason: "wrong_kind_or_status",
       operatorAttempted,
       operatorSent,
-      operatorError: operatorError ? "Échec de l'envoi opérateur" : undefined,
+      operatorError: operatorError ? "Echec de l'envoi operateur" : undefined,
     };
   }
 
   const email = lead.clientEmail?.trim();
   if (!email?.includes("@")) {
     if (process.env.NODE_ENV === "development") {
-      console.warn("[vtc-core-api][mail] décision client ignorée : e-mail client absent", lead.id);
+      console.warn("[vtc-core-api][mail] decision client ignoree : e-mail client absent", lead.id);
     }
     return {
       attempted: false,
@@ -144,16 +135,15 @@ export async function sendCustomerDecisionMail(params: {
       skippedReason: "no_client_email",
       operatorAttempted,
       operatorSent,
-      operatorError: operatorError ? "Échec de l'envoi opérateur" : undefined,
+      operatorError: operatorError ? "Echec de l'envoi operateur" : undefined,
     };
   }
 
-  const outcome = lead.status === "accepted" ? "accepted" : "refused";
   const summaryLines = buildDecisionSummaryLines(lead);
   const pkg = buildCustomerDecisionEmail({
     tenant,
     kind: lead.kind === "devis" ? "devis" : "reservation",
-    outcome,
+    outcome: lead.status === "accepted" ? "accepted" : "refused",
     recipientName: recipientDisplayName(lead),
     summaryLines,
     operatorNote: lead.operatorNote,
@@ -177,31 +167,31 @@ export async function sendCustomerDecisionMail(params: {
       },
     });
     if (process.env.NODE_ENV === "development") {
-      console.info(`[vtc-core-api][mail][dev] décision client envoyée lead=${lead.id} outcome=${outcome}`);
+      console.info(`[vtc-core-api][mail][dev] decision client envoyee lead=${lead.id}`);
     }
     return {
       attempted: true,
       sent: true,
       operatorAttempted,
       operatorSent,
-      operatorError: operatorError ? "Échec de l'envoi opérateur" : undefined,
+      operatorError: operatorError ? "Echec de l'envoi operateur" : undefined,
     };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     await prisma.leadRequest.updateMany({
       where: { id: lead.id, tenantId: lead.tenantId },
       data: {
-        customerDecisionMailLastError: msg.slice(0, 1000),
+        customerDecisionMailLastError: message.slice(0, 1000),
       },
     });
-    console.error(`[vtc-core-api][mail] échec envoi décision client lead=${lead.id}: ${msg}`);
+    console.error(`[vtc-core-api][mail] echec envoi decision client lead=${lead.id}: ${message}`);
     return {
       attempted: true,
       sent: false,
-      error: "Échec de l'envoi SMTP",
+      error: "Echec de l'envoi SMTP",
       operatorAttempted,
       operatorSent,
-      operatorError: operatorError ? "Échec de l'envoi opérateur" : undefined,
+      operatorError: operatorError ? "Echec de l'envoi operateur" : undefined,
     };
   }
 }

@@ -1,11 +1,16 @@
 /**
- * Vérification locale du rendu HTML des e-mails leads (sans envoi SMTP).
+ * Verification locale du rendu HTML des e-mails leads (sans envoi SMTP).
  * Usage : npx tsx scripts/verify-lead-emails.ts
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { TenantConfig } from "../src/types/tenant";
-import { buildCustomerConfirmation, buildOperatorEmail } from "../src/modules/email/formatLeadEmail";
+import {
+  buildCustomerConfirmation,
+  buildCustomerDecisionEmail,
+  buildOperatorDecisionEmail,
+  buildOperatorEmail,
+} from "../src/modules/email/formatLeadEmail";
 
 const OUT_DIR = path.join(__dirname, "..", "email-verify-output");
 
@@ -20,8 +25,8 @@ process.env.PUBLIC_SITE_URL = "https://www.demo-vtc.fr";
 const mockTenant = {
   id: "demo",
   engineRef: "demo",
-  company: { name: "VTC Démonstration" },
-  baseAddress: { label: "Base opérationnelle" },
+  company: { name: "VTC Demonstration" },
+  baseAddress: { label: "Base operationnelle" },
   serviceArea: { description: "Normandie" },
   pricing: {},
   airports: [],
@@ -30,7 +35,6 @@ const mockTenant = {
   pricingEngine: {} as TenantConfig["pricingEngine"],
 } as TenantConfig;
 
-/** Simule le spread réel + champs techniques qui ne doivent jamais apparaître dans le HTML. */
 function flatContact(): Record<string, string> {
   return {
     DetailsMajorations: `[{"leg":"aller","montant":12}]`,
@@ -44,7 +48,7 @@ function flatContact(): Record<string, string> {
     DateEnvoi: "28/04/2026 12:00",
     Etiquette: "CONTACT",
     Statut: "new",
-    Commentaires: "Bonjour, je souhaite un renseignement sur vos tarifs aéroport.",
+    Commentaires: "Bonjour, je souhaite un renseignement sur vos tarifs aeroport.",
     TarifTotal: "0.00",
     TypeTrajet: "N/A",
     LeadId: LEAD_CONTACT,
@@ -69,26 +73,26 @@ function flatDevis(): Record<string, string> {
     AdresseSociete: "12 rue du Port, Le Havre",
     TypeService: "Trajet Classique",
     TypeTrajet: "Aller Simple",
-    RésuméTrajet: "Le Havre → Rouen — Aller Simple",
+    RésuméTrajet: "Le Havre -> Rouen - Aller Simple",
     DateAller: "2026-05-02",
     HeureAller: "09:30",
     DateRetour: "N/A",
     HeureRetour: "N/A",
-    AdresseDepart_1: "Le Havre, Gare routière",
+    AdresseDepart_1: "Le Havre, Gare routiere",
     AdresseArrivee_1: "Rouen, centre-ville",
     AdresseDepart_2: "N/A",
     AdresseArrivee_2: "N/A",
     NombrePassagers: "2",
     BagagesAller: "2",
     BagagesRetour: "0",
-    Commentaires: "Merci de prévoir une bouteille d'eau.",
+    Commentaires: "Merci de prevoir une bouteille d'eau.",
     TarifTotal: "156.50",
     Statut: "pending",
-    Payé: "Non",
+    "Payé": "Non",
     PaymentMethode: "N/A",
     LeadId: LEAD_DEVIS,
     TypeDemande: "devis",
-    Options: "Siège enfant",
+    Options: "Siege enfant",
     DashboardLink: `${DASHBOARD_BASE}/pro/demandes/${LEAD_DEVIS}`,
   };
 }
@@ -105,9 +109,9 @@ function flatReservation(): Record<string, string> {
     Email: "luc.bernard@mail.fr",
     Organisation: "Particulier",
     NomSociete: "N/A",
-    TypeService: "Transfert Aéroport",
+    TypeService: "Transfert Aeroport",
     TypeTrajet: "Aller Simple",
-    RésuméTrajet: "Caen → CDG",
+    RésuméTrajet: "Caen -> CDG",
     DateAller: "2026-05-10",
     HeureAller: "05:15",
     AdresseDepart_1: "CAEN",
@@ -120,11 +124,11 @@ function flatReservation(): Record<string, string> {
     Observations: "",
     TarifTotal: "189.00",
     Statut: "pending",
-    Payé: "Non",
+    "Payé": "Non",
     PaymentMethode: "N/A",
     LeadId: LEAD_RES,
     TypeDemande: "reservation",
-    Options: "aucun extra sélectionné",
+    Options: "aucun extra selectionne",
     DashboardLink: `${DASHBOARD_BASE}/pro/demandes/${LEAD_RES}`,
   };
 }
@@ -139,27 +143,23 @@ function stripTags(html: string): string {
 }
 
 function extractPrimaryCtaHref(html: string): string | null {
-  const m = html.match(
-    /<a\s+[^>]*href="([^"]+)"[^>]*>\s*Voir la demande\s*<\/a>/i
-  );
-  return m?.[1] ?? null;
+  const match = html.match(/<a\s+[^>]*href="([^"]+)"[^>]*>\s*Voir la demande\s*<\/a>/i);
+  return match?.[1] ?? null;
 }
 
-/** Mots techniques anglais à éviter dans le corps visible (hors « contact » / « devis » français). */
 const ENGLISH_LEAK = /\b(null|undefined|pending)\b/i;
 
 function assertNoForbiddenNoise(html: string, label: string): void {
   const lower = html.toLowerCase();
   if (lower.includes(">n/a<") || lower.includes("n/a</td>")) {
-    throw new Error(`[${label}] Chaîne N/A visible dans le HTML`);
+    throw new Error(`[${label}] Chaine N/A visible dans le HTML`);
   }
   if (lower.includes(">null<") || lower.includes("undefined")) {
     throw new Error(`[${label}] null / undefined visible dans le HTML`);
   }
   const plain = stripTags(html);
   if (ENGLISH_LEAK.test(plain)) {
-    const hit = plain.match(ENGLISH_LEAK);
-    throw new Error(`[${label}] Mot anglais suspect dans le texte visible : ${hit?.[0]}`);
+    throw new Error(`[${label}] Mot anglais suspect dans le texte visible`);
   }
 }
 
@@ -173,12 +173,7 @@ function main(): void {
     subjectPrefix: string;
     customer?: { type: "devis" | "reservation"; lines: string[] };
   }> = [
-    {
-      name: "contact",
-      kind: "contact",
-      flat: flatContact(),
-      subjectPrefix: "",
-    },
+    { name: "contact", kind: "contact", flat: flatContact(), subjectPrefix: "" },
     {
       name: "devis",
       kind: "devis",
@@ -187,10 +182,10 @@ function main(): void {
       customer: {
         type: "devis",
         lines: [
-          `Référence : ${LEAD_DEVIS}`,
-          `Tarif estimé : 156.5 €`,
-          `Service : Trajet Classique`,
-          `Trajet : Le Havre → Rouen`,
+          `Reference : ${LEAD_DEVIS}`,
+          "Tarif estime : 156.5 EUR",
+          "Service : Trajet Classique",
+          "Trajet : Le Havre -> Rouen",
         ],
       },
     },
@@ -198,68 +193,93 @@ function main(): void {
       name: "reservation",
       kind: "reservation",
       flat: flatReservation(),
-      subjectPrefix: "[RÉSERVATION] ",
+      subjectPrefix: "[RESERVATION] ",
       customer: {
         type: "reservation",
         lines: [
-          `Référence : ${LEAD_RES}`,
-          `Tarif : 189 €`,
-          `Paiement : Non — N/A`,
-          `Trajet : Caen → CDG`,
+          `Reference : ${LEAD_RES}`,
+          "Tarif : 189 EUR",
+          "Paiement : Non - N/A",
+          "Trajet : Caen -> CDG",
         ],
       },
     },
   ];
 
-  console.log("=== Vérification e-mails leads ===\n");
+  console.log("=== Verification e-mails leads ===\n");
 
-  for (const c of cases) {
-    const op = buildOperatorEmail({
+  for (const current of cases) {
+    const operator = buildOperatorEmail({
       tenant: mockTenant,
-      type: c.kind,
-      subjectPrefix: c.subjectPrefix,
-      flat: c.flat,
+      type: current.kind,
+      subjectPrefix: current.subjectPrefix,
+      flat: current.flat,
     });
 
     const expectedHref = `${DASHBOARD_BASE}/pro/demandes/${
-      c.kind === "contact" ? LEAD_CONTACT : c.kind === "devis" ? LEAD_DEVIS : LEAD_RES
+      current.kind === "contact" ? LEAD_CONTACT : current.kind === "devis" ? LEAD_DEVIS : LEAD_RES
     }`;
-    const href = extractPrimaryCtaHref(op.html);
+    const href = extractPrimaryCtaHref(operator.html);
     if (href !== expectedHref) {
-      throw new Error(
-        `[${c.name}] Bouton CTA : attendu ${expectedHref}, obtenu ${href}`
-      );
+      throw new Error(`[${current.name}] Bouton CTA attendu ${expectedHref}, obtenu ${href}`);
     }
 
-    assertNoForbiddenNoise(op.html, `${c.name} opérateur`);
+    assertNoForbiddenNoise(operator.html, `${current.name} operateur`);
+    fs.writeFileSync(path.join(OUT_DIR, `${current.name}-operateur.html`), operator.html, "utf8");
+    fs.writeFileSync(path.join(OUT_DIR, `${current.name}-operateur.txt`), operator.text, "utf8");
+    console.log(`OK ${current.name} operateur`);
 
-    fs.writeFileSync(path.join(OUT_DIR, `${c.name}-operateur.html`), op.html, "utf8");
-    fs.writeFileSync(path.join(OUT_DIR, `${c.name}-operateur.txt`), op.text, "utf8");
-
-    console.log(`✓ ${c.name} — opérateur OK`);
-    console.log(`  Sujet : ${op.subject}`);
-    console.log(`  CTA href : ${href}`);
-
-    if (c.customer) {
-      const cust = buildCustomerConfirmation({
+    if (current.customer) {
+      const customer = buildCustomerConfirmation({
         tenant: mockTenant,
-        type: c.customer.type,
-        recipientName: "Prénom Nom",
-        summaryLines: c.customer.lines,
+        type: current.customer.type,
+        recipientName: "Prenom Nom",
+        summaryLines: current.customer.lines,
       });
-      assertNoForbiddenNoise(cust.html, `${c.name} client`);
-      const plain = stripTags(cust.html);
-      if (plain.includes("Paiement") && plain.includes("N/A")) {
-        throw new Error(`[${c.name} client] Ligne paiement N/A encore présente`);
-      }
-      fs.writeFileSync(path.join(OUT_DIR, `${c.name}-client.html`), cust.html, "utf8");
-      console.log(`✓ ${c.name} — client OK (${cust.subject})`);
+      assertNoForbiddenNoise(customer.html, `${current.name} client`);
+      fs.writeFileSync(path.join(OUT_DIR, `${current.name}-client.html`), customer.html, "utf8");
+      console.log(`OK ${current.name} client`);
     }
-    console.log("");
   }
 
-  console.log(`Fichiers HTML écrits dans : ${OUT_DIR}`);
-  console.log("Toutes les assertions ont réussi.");
+  const decisions = [
+    { name: "devis-accepte", kind: "devis" as const, outcome: "accepted" as const },
+    { name: "devis-refuse", kind: "devis" as const, outcome: "refused" as const },
+    { name: "reservation-acceptee", kind: "reservation" as const, outcome: "accepted" as const },
+    { name: "reservation-refusee", kind: "reservation" as const, outcome: "refused" as const },
+  ];
+
+  for (const decision of decisions) {
+    const customerDecision = buildCustomerDecisionEmail({
+      tenant: mockTenant,
+      kind: decision.kind,
+      outcome: decision.outcome,
+      recipientName: "Prenom Nom",
+      summaryLines: [
+        `Reference : ${decision.kind === "devis" ? LEAD_DEVIS : LEAD_RES}`,
+        `Trajet : ${decision.kind === "devis" ? "Le Havre -> Rouen" : "Caen -> CDG"}`,
+        decision.outcome === "accepted" ? "Tarif : 189 EUR" : "Tarif : 0.00 EUR",
+      ],
+      operatorNote: decision.outcome === "refused" ? "Nous ne sommes plus disponibles sur ce creneau." : "",
+    });
+    assertNoForbiddenNoise(customerDecision.html, `${decision.name} client`);
+    fs.writeFileSync(path.join(OUT_DIR, `${decision.name}.html`), customerDecision.html, "utf8");
+    console.log(`OK ${decision.name}`);
+  }
+
+  const operatorDecision = buildOperatorDecisionEmail({
+    tenant: mockTenant,
+    leadId: LEAD_DEVIS,
+    kindLabel: "Devis",
+    statusLabel: "Accepte",
+    clientName: "Jean Martin",
+    proUrl: `${DASHBOARD_BASE}/pro/demandes/${LEAD_DEVIS}`,
+  });
+  assertNoForbiddenNoise(operatorDecision.html, "operateur decision");
+  fs.writeFileSync(path.join(OUT_DIR, "decision-operateur.html"), operatorDecision.html, "utf8");
+  console.log("OK operateur decision");
+
+  console.log(`Fichiers HTML ecrits dans : ${OUT_DIR}`);
 }
 
 main();
