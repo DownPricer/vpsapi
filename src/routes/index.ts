@@ -6,6 +6,7 @@ import { contactRoutes } from "./contact.routes";
 import { dashboardRoutes } from "./dashboard.routes";
 import { devisRoutes } from "./devis.routes";
 import { proRoutes } from "./pro.routes";
+import { publicRoutes } from "./public.routes";
 import { requestsRoutes } from "./requests.routes";
 import { reservationRoutes } from "./reservation.routes";
 import { smtpDebugRoutes } from "./smtpDebug.routes";
@@ -17,6 +18,7 @@ export function createTenantApiRouter(): Router {
   const router = Router();
 
   router.use("/auth", authRoutes);
+  router.use("/public", publicRoutes);
   router.use("/calculer-tarif", calculerTarifRoutes);
   router.use("/devis", devisRoutes);
   router.use("/reservation", reservationRoutes);
