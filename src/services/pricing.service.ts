@@ -6,6 +6,10 @@ import {
   normalizeTypeService,
   serializeTarifResult,
 } from "../modules/pricing";
+import {
+  buildPricingDebugBreakdown,
+  type PricingDebugBreakdown,
+} from "../modules/pricing/pricingDebugBreakdown";
 import type { Distances, TarifResult } from "../modules/pricing/types";
 
 export type ServiceTypeKey = "classique" | "aeroport" | "mad-evenementiel";
@@ -26,8 +30,14 @@ export function resolveServiceTypeKey(body: Record<string, unknown>): ServiceTyp
  */
 export async function runPricingPipeline(
   tenant: TenantConfig,
-  body: Record<string, unknown>
-): Promise<{ typeKey: ServiceTypeKey; distances: Distances; result: TarifResult }> {
+  body: Record<string, unknown>,
+  opts?: { includeDebug?: boolean }
+): Promise<{
+  typeKey: ServiceTypeKey;
+  distances: Distances;
+  result: TarifResult;
+  pricingDebug?: PricingDebugBreakdown;
+}> {
   const apiKey = requireDistanceMatrixKey();
   const typeKey = resolveServiceTypeKey(body);
   if (!typeKey) {
@@ -37,7 +47,18 @@ export async function runPricingPipeline(
   const engine = tenant.pricingEngine;
   const distances = await calculerDistances(apiKey, body, engine);
   const result = await calculerTarif(typeKey, body, distances, engine);
-  return { typeKey, distances, result };
+  let pricingDebug: PricingDebugBreakdown | undefined;
+  if (opts?.includeDebug) {
+    pricingDebug = buildPricingDebugBreakdown({
+      tenantId: tenant.id,
+      typeKey,
+      body,
+      engine,
+      distances,
+      result,
+    });
+  }
+  return { typeKey, distances, result, pricingDebug };
 }
 
 export class PricingService {
@@ -47,9 +68,10 @@ export class PricingService {
    */
   async computeTariffForRequest(
     tenant: TenantConfig,
-    body: Record<string, unknown>
-  ): Promise<Record<string, unknown>> {
-    const { result } = await runPricingPipeline(tenant, body);
-    return serializeTarifResult(result);
+    body: Record<string, unknown>,
+    opts?: { includeDebug?: boolean }
+  ): Promise<{ serialized: Record<string, unknown>; pricingDebug?: PricingDebugBreakdown }> {
+    const { result, pricingDebug } = await runPricingPipeline(tenant, body, opts);
+    return { serialized: serializeTarifResult(result), pricingDebug };
   }
 }

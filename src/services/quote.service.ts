@@ -6,6 +6,7 @@ import { inferScheduleRange } from "../modules/leads/schedule";
 import { sendDevisLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
+import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
 import { parseClientBlock } from "../validation/clientBlock";
 
 export interface DevisSuccess {
@@ -14,18 +15,26 @@ export interface DevisSuccess {
   message: string;
   emailSent: boolean;
   emailError?: string | null;
+  /** Présent uniquement si le client a autorisé le debug tarifaire (en-tête secret). */
+  pricingDebug?: PricingDebugBreakdown;
 }
 
 export class QuoteService {
   private requestService = new RequestService();
 
-  async processDevis(tenant: TenantConfig, body: Record<string, unknown>): Promise<DevisSuccess> {
+  async processDevis(
+    tenant: TenantConfig,
+    body: Record<string, unknown>,
+    includeDebug = false
+  ): Promise<DevisSuccess> {
     const clientParsed = parseClientBlock(body);
     if (!clientParsed.ok) {
       throw new Error(clientParsed.message);
     }
 
-    const { result, distances } = await runPricingPipeline(tenant, body);
+    const { result, distances, pricingDebug } = await runPricingPipeline(tenant, body, {
+      includeDebug,
+    });
     const engine = tenant.pricingEngine;
 
     const lead = buildDevisPayload({
@@ -94,6 +103,7 @@ export class QuoteService {
         : "Devis enregistré — notification e-mail non envoyée (voir back-office).",
       emailSent,
       emailError,
+      ...(pricingDebug ? { pricingDebug } : {}),
     };
   }
 }

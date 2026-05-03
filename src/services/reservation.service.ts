@@ -6,6 +6,7 @@ import { inferScheduleRange } from "../modules/leads/schedule";
 import { sendReservationLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
+import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
 import { parseClientBlock } from "../validation/clientBlock";
 
 export interface ReservationSuccess {
@@ -14,6 +15,7 @@ export interface ReservationSuccess {
   message: string;
   emailSent: boolean;
   emailError?: string | null;
+  pricingDebug?: PricingDebugBreakdown;
 }
 
 export class ReservationService {
@@ -21,14 +23,15 @@ export class ReservationService {
 
   async processReservation(
     tenant: TenantConfig,
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
+    includeDebug = false
   ): Promise<ReservationSuccess> {
     const clientParsed = parseClientBlock(body);
     if (!clientParsed.ok) {
       throw new Error(clientParsed.message);
     }
 
-    const { result } = await runPricingPipeline(tenant, body);
+    const { result, pricingDebug } = await runPricingPipeline(tenant, body, { includeDebug });
     const engine = tenant.pricingEngine;
 
     const paymentMethod =
@@ -107,6 +110,7 @@ export class ReservationService {
         : "Réservation enregistrée — notification e-mail non envoyée (voir back-office).",
       emailSent,
       emailError,
+      ...(pricingDebug ? { pricingDebug } : {}),
     };
   }
 }

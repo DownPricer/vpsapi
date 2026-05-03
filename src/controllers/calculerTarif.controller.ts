@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { PricingService } from "../services/pricing.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
+import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
 import { parseBody } from "../validation/parseBody";
 import { objectPayloadSchema } from "../validation/schemas";
 
@@ -18,8 +19,16 @@ export async function postCalculerTarif(
   }
 
   try {
-    const data = await pricingService.computeTariffForRequest(req.tenant, parsed.data);
-    sendSuccess(res, data, { tenantId: req.tenantId });
+    const includeDebug = isPricingDebugAuthorized(req);
+    const { serialized, pricingDebug } = await pricingService.computeTariffForRequest(
+      req.tenant,
+      parsed.data,
+      { includeDebug }
+    );
+    sendSuccess(res, serialized, {
+      tenantId: req.tenantId,
+      ...(pricingDebug ? { pricingDebug } : {}),
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     if (message.startsWith("Type de service inconnu") || message.includes("Type de service")) {

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { ReservationService } from "../services/reservation.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
+import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
 import { parseBody } from "../validation/parseBody";
 import { objectPayloadSchema } from "../validation/schemas";
 
@@ -18,8 +19,13 @@ export async function postReservation(
   }
 
   try {
-    const data = await reservationService.processReservation(req.tenant, parsed.data);
-    sendSuccess(res, data, { tenantId: req.tenantId });
+    const includeDebug = isPricingDebugAuthorized(req);
+    const data = await reservationService.processReservation(req.tenant, parsed.data, includeDebug);
+    const { pricingDebug, ...responseBody } = data;
+    sendSuccess(res, responseBody, {
+      tenantId: req.tenantId,
+      ...(pricingDebug ? { pricingDebug } : {}),
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     if (
