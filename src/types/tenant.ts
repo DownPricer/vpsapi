@@ -76,7 +76,10 @@ export type TenantConfigFile = {
   /** Référence vers un fichier `src/config/tenants/engines/<ref>.engine.json` (voir `engineLoader.ts`). */
   engineRef: string;
   company: TenantCompany;
-  /** Adresse de dépôt utilisée pour les calculs d’approche / retour base (`depotAddress` du moteur). */
+  /**
+   * Adresse de dépôt par défaut (`depotAddress` du moteur) si le corps de requête n’envoie pas `vtcBaseAddress`
+   * (repli compatibilité — le white-label envoie l’adresse depuis les tenant settings du front).
+   */
   baseAddress: TenantAddress;
   /** Zone commerciale / marketing (libellé + régions). La zone tarifaire « préférentielle » est dans le moteur (`primaryServiceZoneSetId`). */
   serviceArea: TenantServiceArea;

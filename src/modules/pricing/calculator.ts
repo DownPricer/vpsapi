@@ -13,6 +13,22 @@ import {
 
 const AR_MAD_CANON = "A/R + Mise à disposition";
 
+/**
+ * Adresse de base / dépôt chauffeur pour cette requête.
+ * Le front envoie `vtcBaseAddress` (tenant settings) ; sinon repli sur `engine.depotAddress` (config serveur).
+ */
+export function resolveVtcBaseAddress(
+  payload: Record<string, unknown>,
+  engine: TenantPricingEngineConfig
+): string {
+  const raw = payload.vtcBaseAddress;
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (t.length > 0) return t;
+  }
+  return engine.depotAddress;
+}
+
 function normalizeString(str: string): string {
   if (!str || typeof str !== "string") return "";
   return str
@@ -165,7 +181,7 @@ export async function calculerDistances(
     },
   };
 
-  const base = engine.depotAddress;
+  const base = resolveVtcBaseAddress(payload, engine);
   const addresses = new Set<string>();
   const add = (a: string | { formatted?: string } | null | undefined) => {
     const f = getFormattedAddress(a);

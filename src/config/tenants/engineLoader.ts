@@ -19,9 +19,9 @@ export function listEngineRefs(): string[] {
 }
 
 /**
- * Charge et valide un moteur, puis fixe l’adresse de dépôt depuis le client :
- * `depotAddress` utilisée par le calculateur = `baseAddress.label` du tenant
- * (un même fichier moteur peut servir plusieurs sites avec des bases différentes).
+ * Charge et valide un moteur, puis fixe l’adresse de dépôt **par défaut** depuis le fichier tenant :
+ * `depotAddress` sert de repli si le corps de requête n’inclut pas `vtcBaseAddress`
+ * (le front envoie l’adresse de base depuis les tenant settings white-label).
  */
 export function buildPricingEngineForTenant(file: TenantConfigFile): TenantPricingEngineConfig {
   const raw = ENGINE_JSON_BY_REF[file.engineRef];

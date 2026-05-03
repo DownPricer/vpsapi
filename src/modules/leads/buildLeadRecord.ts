@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { buildGcalUrl } from "../pricing/calculator";
+import { buildGcalUrl, resolveVtcBaseAddress } from "../pricing/calculator";
 import type { TenantPricingEngineConfig } from "../pricing/engineTypes";
 import type { Distances, TarifResult } from "../pricing/types";
 import {
@@ -464,6 +464,7 @@ export interface DevisPayloadInput {
 export function buildDevisPayload(input: DevisPayloadInput): Record<string, string> {
   const { payload, result, distances, engine } = input;
   const flat = getFlatFromNestedPayload(payload, engine);
+  const baseAddr = resolveVtcBaseAddress(payload, engine);
   const now = DateTime.now().setZone(engine.timezone);
   const devisId = `DEV${now.toFormat("ddMMyy-HHmmss")}`;
   const tarifs = result.tarifs as Record<string, number | Record<string, number>>;
@@ -484,7 +485,7 @@ export function buildDevisPayload(input: DevisPayloadInput): Record<string, stri
 
   let résuméTrajet = "N/A";
   if (flat.TypeService === "MAD Evenementiel") {
-    résuméTrajet = `M.A.D évènementiel — ${engine.depotAddress} → ${flat.LieuEvenement}`;
+    résuméTrajet = `M.A.D évènementiel — ${baseAddr} → ${flat.LieuEvenement}`;
   } else if (flat.TypeService === "Trajet Classique") {
     let part1 = `${flat.AdresseDepart_1} → ${flat.AdresseArrivee_1}`;
     if (flat.TypeTrajet !== "Aller Simple") {
@@ -523,7 +524,7 @@ Organisation: ${typeClient}${isPro ? ` — Société: ${flat.NomSociete} (${flat
     Résumé: resumeText,
     RésuméTrajet: résuméTrajet,
     DateCreation: now.toISO() ?? "",
-    AdresseBase: engine.depotAddress,
+    AdresseBase: baseAddr,
     DetailsMajorations: JSON.stringify(maj),
     Majoration_1: maj0.toFixed(2),
     Majoration_2: maj1.toFixed(2),
