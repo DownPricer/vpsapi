@@ -36,32 +36,91 @@ enum LeadStatus {
   expired
 }
 
+enum StripeOnboardingStatus {
+  NOT_STARTED
+  PENDING
+  RESTRICTED
+  COMPLETE
+}
+
+enum TenantPaymentMode {
+  FULL
+  DEPOSIT
+}
+
+enum PaymentProvider {
+  STRIPE
+}
+
+enum PaymentMode {
+  FULL
+  DEPOSIT
+}
+
+enum PaymentStatus {
+  PENDING
+  LINK_SENT
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+  CANCELLED
+}
+
+enum LeadPaymentStatus {
+  NONE
+  PENDING
+  LINK_SENT
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+  CANCELLED
+}
+
 model Tenant {
-  id            String              @id
-  name          String
-  slug          String              @unique
-  active        Boolean             @default(true)
-  configRef     String?
+  id                           String                 @id
+  name                         String
+  slug                         String                 @unique
+  active                       Boolean                @default(true)
+  configRef                    String?
   /// Paramètres vitrine / dashboard (JSON). Aucun secret ne doit y être stocké.
-  settings      Json?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  users         OperatorUser[]
-  leads         LeadRequest[]
-  statusHistory LeadStatusHistory[]
-  authSessions  AuthSession[]
+  settings                     Json?
+  /// Compte Stripe Connect Express du VTC (acct_...).
+  stripeAccountId              String?                @unique
+  stripeChargesEnabled         Boolean                @default(false)
+  stripePayoutsEnabled         Boolean                @default(false)
+  stripeDetailsSubmitted       Boolean                @default(false)
+  stripeOnboardingStatus       StripeOnboardingStatus @default(NOT_STARTED)
+  paymentOnlineEnabled         Boolean                @default(false)
+  paymentMode                  TenantPaymentMode      @default(FULL)
+  /// Acompte en pourcentage (1–100) si paymentMode = DEPOSIT et règle %.
+  depositPercent               Int?
+  /// Acompte en centimes si paymentMode = DEPOSIT et règle fixe.
+  depositFixedAmount           Int?
+  /// Devise ISO (V1 : eur).
+  paymentCurrency              String                 @default("eur")
+  /// Commission plateforme en centimes (ex. 500 = 5 €). Non modifiable par le VTC via l’API publique.
+  platformApplicationFeeAmount Int                    @default(500)
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+  users                        OperatorUser[]
+  leads                        LeadRequest[]
+  statusHistory                LeadStatusHistory[]
+  authSessions                 AuthSession[]
+  payments                     Payment[]
 }
 
 model OperatorUser {
-  id           String         @id @default(cuid())
+  id           String              @id @default(cuid())
   tenantId     String
   email        String
   passwordHash String
-  role         OperatorRole   @default(agent)
-  active       Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role         OperatorRole        @default(agent)
+  active       Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   sessions     AuthSession[]
   changedLeads LeadStatusHistory[]
 
@@ -70,66 +129,112 @@ model OperatorUser {
 }
 
 model LeadRequest {
-  id            String              @id @default(cuid())
-  tenantId      String
-  kind          LeadKind
-  status        LeadStatus
-  clientName    String
-  clientPhone   String
-  clientEmail   String
-  rawPayload    Json
-  flatPayload   Json
-  pricingResult Json?
-  sourceSite    String?
-  scheduledStart DateTime?
-  scheduledEnd  DateTime?
-  acceptedAt    DateTime?
-  refusedAt     DateTime?
-  operatorNote  String?
-  emailSentAt   DateTime?
-  emailError    String?
+  id                            String              @id @default(cuid())
+  tenantId                      String
+  kind                          LeadKind
+  status                        LeadStatus
+  clientName                    String
+  clientPhone                   String
+  clientEmail                   String
+  rawPayload                    Json
+  flatPayload                   Json
+  pricingResult                 Json?
+  sourceSite                    String?
+  scheduledStart                DateTime?
+  scheduledEnd                  DateTime?
+  acceptedAt                    DateTime?
+  refusedAt                     DateTime?
+  operatorNote                  String?
+  emailSentAt                   DateTime?
+  emailError                    String?
   /// Dernier accusé / notification envoyé au client suite à une décision opérateur (acceptation / refus).
-  customerDecisionMailSentAt   DateTime?
+  customerDecisionMailSentAt    DateTime?
   customerDecisionMailLastError String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  history       LeadStatusHistory[]
+  /// Miroir simple pour l’UI ; source de vérité : enregistrements Payment.
+  paymentStatus                 LeadPaymentStatus   @default(NONE)
+  createdAt                     DateTime            @default(now())
+  updatedAt                     DateTime            @updatedAt
+  tenant                        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  history                       LeadStatusHistory[]
+  payments                      Payment[]
 
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, kind, status])
   @@index([tenantId, scheduledStart])
 }
 
+model Payment {
+  id                      String          @id @default(cuid())
+  tenantId                String
+  leadRequestId           String
+  status                  PaymentStatus   @default(PENDING)
+  provider                PaymentProvider @default(STRIPE)
+  mode                    PaymentMode
+  /// Montant facturé au client, en centimes.
+  amount                  Int
+  currency                String
+  /// Commission plateforme en centimes, figée à la création.
+  applicationFeeAmount    Int
+  /// Compte connecté Stripe utilisé pour la transaction (acct_...).
+  stripeAccountId         String
+  stripeCheckoutSessionId String?         @unique
+  stripePaymentIntentId   String?         @unique
+  stripePaymentLinkUrl    String?
+  checkoutExpiresAt       DateTime?
+  paidAt                  DateTime?
+  failedAt                DateTime?
+  refundedAt              DateTime?
+  metadata                Json?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  tenant                  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadRequest             LeadRequest     @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, leadRequestId])
+  @@index([tenantId, createdAt(sort: Desc)])
+}
+
+/// Événements Stripe déjà traités (idempotence webhook, clé = event.id Stripe evt_...).
+model StripeWebhookEvent {
+  id            String   @id @default(cuid())
+  stripeEventId String   @unique
+  type          String
+  processedAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([type])
+  @@index([processedAt])
+}
+
 model LeadStatusHistory {
-  id              String       @id @default(cuid())
-  leadId           String
-  tenantId         String
-  previousStatus   LeadStatus?
-  newStatus        LeadStatus
-  changedByUserId  String?
-  note             String?
-  createdAt        DateTime     @default(now())
-  lead             LeadRequest  @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  changedByUser    OperatorUser? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  id              String        @id @default(cuid())
+  leadId          String
+  tenantId        String
+  previousStatus  LeadStatus?
+  newStatus       LeadStatus
+  changedByUserId String?
+  note            String?
+  createdAt       DateTime      @default(now())
+  lead            LeadRequest   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  changedByUser   OperatorUser? @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([leadId, createdAt(sort: Desc)])
 }
 
 model AuthSession {
-  id               String      @id @default(cuid())
+  id               String       @id @default(cuid())
   tenantId         String
   userId           String
   refreshTokenHash String
   expiresAt        DateTime
-  createdAt        DateTime    @default(now())
+  createdAt        DateTime     @default(now())
   revokedAt        DateTime?
   replacedById     String?
   ip               String?
   userAgent        String?
-  tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user             OperatorUser @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId])

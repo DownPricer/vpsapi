@@ -794,3 +794,259 @@ export function buildOperatorDecisionEmail(opts: {
     text,
   };
 }
+
+/** E-mail client : lien de paiement Stripe (PR6A). */
+export function buildPaymentLinkCustomerEmail(opts: {
+  tenant: TenantConfig;
+  clientGreetingName: string;
+  paymentAmountFormatted: string;
+  checkoutUrl: string;
+  leadReference: string;
+  vtcPhone?: string | null;
+  vtcEmail?: string | null;
+}): { subject: string; html: string; text: string } {
+  const brand = brandName(opts.tenant);
+  const site = publicSiteUrl(opts.tenant);
+  const subject = "Lien de paiement pour votre course VTC";
+  const name = opts.clientGreetingName.trim();
+  const greetingHtml = name
+    ? `Bonjour ${esc(name)},<br/><br/>Votre demande a ete acceptee. Vous pouvez regler votre course en ligne de facon securisee.`
+    : `Bonjour,<br/><br/>Votre demande a ete acceptee. Vous pouvez regler votre course en ligne de facon securisee.`;
+
+  const refBlock = opts.leadReference
+    ? `<tr><td style="padding:0 24px 12px;font-size:13px;color:${THEME.textMuted};text-align:center">Reference : <strong style="color:${THEME.text}">${esc(opts.leadReference)}</strong></td></tr>`
+    : "";
+
+  const amountBlock = `<tr><td style="padding:0 24px 22px;text-align:center">
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Montant a regler</div>
+    <div style="font-size:32px;font-weight:800;color:${THEME.text};line-height:1.2">${esc(opts.paymentAmountFormatted)}</div>
+  </td></tr>`;
+
+  const ctaRow = `<tr><td style="padding:0 24px 22px;text-align:center">${buttonHtml(
+    "Payer en ligne",
+    opts.checkoutUrl
+  )}</td></tr>`;
+
+  const stripeNote = `<tr><td style="padding:0 24px 16px;text-align:center">
+    <p style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">Le paiement est securise par Stripe.</p>
+  </td></tr>`;
+
+  const fallbackBlock = `<tr><td style="padding:0 24px 22px">
+    <p style="margin:0;font-size:13px;line-height:1.7;color:${THEME.textMuted}">
+      Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :<br/>
+      <span style="word-break:break-all;color:${THEME.text};font-weight:600">${esc(opts.checkoutUrl)}</span>
+    </p>
+  </td></tr>`;
+
+  const contactRows: RowDef[] = [];
+  if (opts.vtcPhone?.trim()) {
+    contactRows.push({
+      key: "vtc-tel",
+      label: "Telephone",
+      value: opts.vtcPhone.trim(),
+      section: "meta",
+    });
+  }
+  if (opts.vtcEmail?.trim()) {
+    contactRows.push({
+      key: "vtc-mail",
+      label: "E-mail",
+      value: opts.vtcEmail.trim(),
+      section: "meta",
+    });
+  }
+  const contactHtml = cardSectionHtml("Contact", contactRows);
+
+  const bodyBlocks = `${refBlock}${amountBlock}${ctaRow}${stripeNote}${fallbackBlock}${contactHtml}`;
+
+  const html = shellHtml({
+    preheader: `${subject} — ${brand}`,
+    brand,
+    badge: badgeHtml("Paiement en ligne", "success"),
+    title: "Reglement de votre course",
+    intro: greetingHtml,
+    bodyBlocks,
+    footerSite: site,
+    footerText: `${brand} — Paiement en ligne`,
+  });
+
+  const textLines: string[] = [
+    name ? `Bonjour ${name},` : "Bonjour,",
+    "",
+    "Votre demande a ete acceptee. Paiement en ligne.",
+    `Montant a regler : ${opts.paymentAmountFormatted}`,
+  ];
+  if (opts.leadReference) textLines.push(`Reference : ${opts.leadReference}`);
+  textLines.push("", `Payer en ligne : ${opts.checkoutUrl}`, "", "Le paiement est securise par Stripe.", "");
+  if (opts.vtcPhone?.trim()) textLines.push(`Telephone : ${opts.vtcPhone.trim()}`);
+  if (opts.vtcEmail?.trim()) textLines.push(`E-mail : ${opts.vtcEmail.trim()}`);
+  textLines.push("", brand, site);
+
+  return {
+    subject,
+    html,
+    text: textLines.filter(Boolean).join("\n"),
+  };
+}
+
+/** E-mail client : paiement confirmé (PR6B, webhook). */
+export function buildPaymentConfirmationCustomerEmail(opts: {
+  tenant: TenantConfig;
+  /** Salutation (prénom/nom ou équivalent). */
+  clientName: string;
+  /** Montant encaissé, déjà formaté (ex. EUR). */
+  amountFormatted: string;
+  leadReference: string;
+  tripSummary?: string | null;
+  vtcPhone?: string | null;
+  vtcEmail?: string | null;
+}): { subject: string; html: string; text: string } {
+  const commercialName = brandName(opts.tenant);
+  const site = publicSiteUrl(opts.tenant);
+  const subject = "Paiement reçu pour votre course VTC";
+  const name = opts.clientName.trim();
+  const greetingHtml = name
+    ? `Bonjour ${esc(name)},<br/><br/>Nous confirmons la réception de votre paiement.`
+    : `Bonjour,<br/><br/>Nous confirmons la réception de votre paiement.`;
+
+  const refBlock = opts.leadReference
+    ? `<tr><td style="padding:0 24px 16px;font-size:13px;color:${THEME.textMuted};text-align:center">Référence demande : <strong style="color:${THEME.text}">${esc(opts.leadReference)}</strong></td></tr>`
+    : "";
+
+  const amountBlock = `<tr><td style="padding:0 24px 22px;text-align:center">
+    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Montant payé</div>
+    <div style="font-size:32px;font-weight:800;color:${THEME.text};line-height:1.2">${esc(opts.amountFormatted)}</div>
+  </td></tr>`;
+
+  const tripBlock =
+    opts.tripSummary?.trim() ?
+      `<tr><td style="padding:0 24px 20px">
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Votre course</div>
+        <p style="margin:0;font-size:14px;line-height:1.65;color:${THEME.text};word-break:break-word">${esc(opts.tripSummary.trim())}</p>
+      </td></tr>`
+    : "";
+
+  const stripeNote = `<tr><td style="padding:0 24px 18px;text-align:center">
+    <p style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">Le paiement a été traité de manière sécurisée par Stripe.</p>
+  </td></tr>`;
+
+  const contactRows: RowDef[] = [];
+  if (opts.vtcPhone?.trim()) {
+    contactRows.push({
+      key: "vtc-tel",
+      label: "Téléphone",
+      value: opts.vtcPhone.trim(),
+      section: "meta",
+    });
+  }
+  if (opts.vtcEmail?.trim()) {
+    contactRows.push({
+      key: "vtc-mail",
+      label: "E-mail",
+      value: opts.vtcEmail.trim(),
+      section: "meta",
+    });
+  }
+  const contactHtml = cardSectionHtml("Contact", contactRows);
+
+  const bodyBlocks = `${refBlock}${amountBlock}${tripBlock}${stripeNote}${contactHtml}`;
+
+  const html = shellHtml({
+    preheader: `${subject} — ${commercialName}`,
+    brand: commercialName,
+    badge: badgeHtml("Paiement reçu", "success"),
+    title: "Merci pour votre règlement",
+    intro: greetingHtml,
+    bodyBlocks,
+    footerSite: site,
+    footerText: `${commercialName} — Confirmation de paiement`,
+  });
+
+  const textLines: string[] = [
+    name ? `Bonjour ${name},` : "Bonjour,",
+    "",
+    "Nous confirmons la réception de votre paiement.",
+    `Montant payé : ${opts.amountFormatted}`,
+  ];
+  if (opts.leadReference) textLines.push(`Référence demande : ${opts.leadReference}`);
+  if (opts.tripSummary?.trim()) textLines.push("", `Rappel trajet : ${opts.tripSummary.trim()}`);
+  textLines.push("", "Le paiement a été traité de manière sécurisée par Stripe.", "");
+  if (opts.vtcPhone?.trim()) textLines.push(`Téléphone : ${opts.vtcPhone.trim()}`);
+  if (opts.vtcEmail?.trim()) textLines.push(`E-mail : ${opts.vtcEmail.trim()}`);
+  textLines.push("", commercialName, site);
+
+  return { subject, html, text: textLines.filter(Boolean).join("\n") };
+}
+
+/** E-mail opérateur : paiement confirmé sur une demande (PR6B). */
+export function buildPaymentConfirmationOperatorEmail(opts: {
+  tenant: TenantConfig;
+  amountFormatted: string;
+  clientName: string;
+  leadReference: string;
+  paymentModeLabel: string;
+  proUrl?: string;
+}): { subject: string; html: string; text: string } {
+  const commercialName = brandName(opts.tenant);
+  const site = publicSiteUrl(opts.tenant);
+  const subject = "Paiement reçu — demande VTC";
+
+  const intro =
+    "Un paiement a été reçu pour une demande. Les détails sont récapitulés ci-dessous.";
+
+  const html = shellHtml({
+    preheader: `${subject} — ${commercialName}`,
+    brand: commercialName,
+    badge: badgeHtml("Encaissement", "success"),
+    title: "Paiement confirmé",
+    intro,
+    bodyBlocks: cardSectionHtml("Détail", [
+      {
+        key: "ref",
+        label: "Référence demande",
+        value: opts.leadReference,
+        section: "meta",
+      },
+      {
+        key: "client",
+        label: "Client",
+        value: opts.clientName,
+        section: "client",
+      },
+      {
+        key: "amount",
+        label: "Montant payé",
+        value: opts.amountFormatted,
+        section: "pricing",
+      },
+      {
+        key: "mode",
+        label: "Mode de paiement",
+        value: opts.paymentModeLabel,
+        section: "pricing",
+      },
+    ]),
+    cta: opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : undefined,
+    footerSite: site,
+    footerText: "Notification opérateur — paiement",
+  });
+
+  const text = [
+    subject,
+    commercialName,
+    "",
+    intro,
+    "",
+    `Référence demande : ${opts.leadReference}`,
+    `Client : ${opts.clientName}`,
+    `Montant payé : ${opts.amountFormatted}`,
+    `Mode : ${opts.paymentModeLabel}`,
+    opts.proUrl ? `Tableau de bord : ${opts.proUrl}` : "",
+    "",
+    site,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return { subject, html, text };
+}
