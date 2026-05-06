@@ -72,6 +72,7 @@ export async function sendPaymentConfirmationToCustomer(params: {
       tripSummary: tripSummaryFromLead(params.lead),
       vtcPhone: params.vtcPhone,
       vtcEmail: params.vtcEmail,
+      receiptUrl: params.payment.stripeReceiptUrl,
     });
 
     await sendSmtpMessage({
@@ -123,6 +124,7 @@ export async function sendPaymentConfirmationToOperator(params: {
       leadReference: params.lead.id,
       paymentModeLabel: paymentModeLabel(params.payment.mode),
       proUrl,
+      receiptUrl: params.payment.stripeReceiptUrl,
     });
 
     await sendSmtpMessage({

@@ -15,6 +15,7 @@ const paymentLinkBodySchema = z
     mode: z.enum(["full", "deposit"]),
     sendEmail: z.boolean().optional().default(false),
     message: z.string().max(1000).optional(),
+    forceNewCheckoutSession: z.boolean().optional().default(false),
   })
   .strict();
 
@@ -75,6 +76,7 @@ export async function postDemandePaymentLink(
       mode,
       sendEmail,
       message: parsed.data.message,
+      forceNewCheckoutSession: parsed.data.forceNewCheckoutSession,
     });
 
     let emailSent = false;
@@ -120,7 +122,8 @@ export async function postDemandePaymentLink(
         amount: result.amount,
         currency: result.currency,
         applicationFeeAmount: result.applicationFeeAmount,
-        emailSent,
+        reusedExistingCheckout: result.reusedExistingCheckout,
+        emailSent: sendEmail ? emailSent : false,
         ...(emailErrorCode ? { emailErrorCode } : {}),
       },
     });

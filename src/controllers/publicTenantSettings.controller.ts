@@ -25,7 +25,7 @@ export async function getPublicTenantSettings(req: Request, res: Response, next:
       res.status(200).json({
         success: true,
         data: { settings: null },
-        meta: { persisted: false },
+        meta: { persisted: false, paymentOnlineEnabled: state.paymentOnlineEnabled },
       });
       return;
     }
@@ -34,7 +34,10 @@ export async function getPublicTenantSettings(req: Request, res: Response, next:
     res.status(200).json({
       success: true,
       data: { settings: sanitized ?? {} },
-      meta: { persisted: true },
+      meta: {
+        persisted: true,
+        paymentOnlineEnabled: state.paymentOnlineEnabled,
+      },
     });
   } catch (e) {
     next(e);

@@ -7,6 +7,7 @@ import { sendReservationLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
 import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
+import { parseClientWantsOnlinePayment } from "../modules/leads/parseClientWantsOnlinePayment";
 import { parseClientBlock } from "../validation/clientBlock";
 
 export interface ReservationSuccess {
@@ -51,6 +52,7 @@ export class ReservationService {
       paye,
     });
     const schedule = inferScheduleRange(lead, engine);
+    const wantsOnline = parseClientWantsOnlinePayment(body);
     const created = await this.requestService.createLead({
       tenantId: tenant.id,
       kind: LeadKind.reservation,
@@ -64,6 +66,7 @@ export class ReservationService {
       sourceSite: tenant.branding?.siteUrl,
       scheduledStart: schedule.start,
       scheduledEnd: schedule.end,
+      clientWantsOnlinePayment: wantsOnline,
     });
 
     const client = body.client as Record<string, string>;

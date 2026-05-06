@@ -4,6 +4,8 @@ import {
 } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { notifyPaymentConfirmedAfterWebhookTransition } from "../modules/email/paymentConfirmationMail";
+import { fetchStripeReceiptUrlForPaymentIntent } from "./stripe/stripeReceiptUrl";
+import { getStripeClient } from "./stripe/stripeClient";
 
 /** Formes minimales des objets Stripe (évite les types du constructeur exporté par défaut). */
 type StripeMetadata = Record<string, string> | null | undefined;
@@ -123,6 +125,39 @@ async function markPaymentPaid(params: {
   return true;
 }
 
+async function persistReceiptThenNotify(params: {
+  paymentId: string;
+  tenantId: string;
+  leadRequestId: string;
+  stripePaymentIntentId: string | null;
+}): Promise<void> {
+  if (params.stripePaymentIntentId) {
+    const stripe = getStripeClient();
+    const row = await prisma.payment.findFirst({
+      where: { id: params.paymentId, tenantId: params.tenantId },
+      select: { stripeAccountId: true, stripeReceiptUrl: true },
+    });
+    if (stripe && row?.stripeAccountId && !row.stripeReceiptUrl) {
+      const url = await fetchStripeReceiptUrlForPaymentIntent(
+        stripe,
+        row.stripeAccountId,
+        params.stripePaymentIntentId
+      );
+      if (url) {
+        await prisma.payment.updateMany({
+          where: { id: params.paymentId, tenantId: params.tenantId },
+          data: { stripeReceiptUrl: url },
+        });
+      }
+    }
+  }
+  await notifyPaymentConfirmedAfterWebhookTransition({
+    tenantId: params.tenantId,
+    leadRequestId: params.leadRequestId,
+    paymentId: params.paymentId,
+  });
+}
+
 async function handleCheckoutSessionCompleted(
   session: CheckoutSessionLike
 ): Promise<void> {
@@ -151,10 +186,11 @@ async function handleCheckoutSessionCompleted(
   });
 
   if (transitioned) {
-    await notifyPaymentConfirmedAfterWebhookTransition({
+    await persistReceiptThenNotify({
+      paymentId,
       tenantId,
       leadRequestId,
-      paymentId,
+      stripePaymentIntentId,
     });
   }
 }
@@ -200,10 +236,11 @@ async function handlePaymentIntentSucceeded(
   });
 
   if (transitioned) {
-    await notifyPaymentConfirmedAfterWebhookTransition({
+    await persistReceiptThenNotify({
+      paymentId,
       tenantId,
       leadRequestId,
-      paymentId,
+      stripePaymentIntentId: pi.id,
     });
   }
 }

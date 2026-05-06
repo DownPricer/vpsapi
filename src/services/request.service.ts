@@ -14,6 +14,7 @@ export type CreateLeadInput = {
   sourceSite?: string;
   scheduledStart?: Date | null;
   scheduledEnd?: Date | null;
+  clientWantsOnlinePayment?: boolean;
 };
 
 export class RequestService {
@@ -90,6 +91,23 @@ export class RequestService {
           orderBy: { createdAt: "desc" },
           include: {
             changedByUser: { select: { id: true, email: true, role: true } },
+          },
+        },
+        payments: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+          select: {
+            id: true,
+            status: true,
+            mode: true,
+            amount: true,
+            currency: true,
+            stripePaymentLinkUrl: true,
+            stripeReceiptUrl: true,
+            stripeCheckoutSessionId: true,
+            checkoutExpiresAt: true,
+            paidAt: true,
+            createdAt: true,
           },
         },
       },

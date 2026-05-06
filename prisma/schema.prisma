@@ -152,6 +152,8 @@ model LeadRequest {
   customerDecisionMailLastError String?
   /// Miroir simple pour l’UI ; source de vérité : enregistrements Payment.
   paymentStatus                 LeadPaymentStatus   @default(NONE)
+  /// Souhaite recevoir un lien de paiement en ligne après acceptation (formulaires publics).
+  clientWantsOnlinePayment      Boolean             @default(false)
   createdAt                     DateTime            @default(now())
   updatedAt                     DateTime            @updatedAt
   tenant                        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -180,6 +182,8 @@ model Payment {
   stripeCheckoutSessionId String?         @unique
   stripePaymentIntentId   String?         @unique
   stripePaymentLinkUrl    String?
+  /// URL du reçu hébergé par Stripe (Charge.receipt_url), si disponible.
+  stripeReceiptUrl        String?
   checkoutExpiresAt       DateTime?
   paidAt                  DateTime?
   failedAt                DateTime?

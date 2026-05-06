@@ -7,6 +7,7 @@ import { sendDevisLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
 import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
+import { parseClientWantsOnlinePayment } from "../modules/leads/parseClientWantsOnlinePayment";
 import { parseClientBlock } from "../validation/clientBlock";
 
 export interface DevisSuccess {
@@ -44,6 +45,7 @@ export class QuoteService {
       engine,
     });
     const schedule = inferScheduleRange(lead, engine);
+    const wantsOnline = parseClientWantsOnlinePayment(body);
     const created = await this.requestService.createLead({
       tenantId: tenant.id,
       kind: LeadKind.devis,
@@ -57,6 +59,7 @@ export class QuoteService {
       sourceSite: tenant.branding?.siteUrl,
       scheduledStart: schedule.start,
       scheduledEnd: schedule.end,
+      clientWantsOnlinePayment: wantsOnline,
     });
 
     const client = body.client as Record<string, string>;

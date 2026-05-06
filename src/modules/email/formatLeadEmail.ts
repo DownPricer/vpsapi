@@ -900,6 +900,7 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
   tripSummary?: string | null;
   vtcPhone?: string | null;
   vtcEmail?: string | null;
+  receiptUrl?: string | null;
 }): { subject: string; html: string; text: string } {
   const commercialName = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
@@ -930,6 +931,14 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
     <p style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">Le paiement a été traité de manière sécurisée par Stripe.</p>
   </td></tr>`;
 
+  const receiptBlock =
+    opts.receiptUrl?.trim() ?
+      `<tr><td style="padding:0 24px 22px;text-align:center">${buttonHtml(
+        "Voir le reçu Stripe",
+        opts.receiptUrl.trim()
+      )}</td></tr>`
+    : "";
+
   const contactRows: RowDef[] = [];
   if (opts.vtcPhone?.trim()) {
     contactRows.push({
@@ -949,7 +958,7 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
   }
   const contactHtml = cardSectionHtml("Contact", contactRows);
 
-  const bodyBlocks = `${refBlock}${amountBlock}${tripBlock}${stripeNote}${contactHtml}`;
+  const bodyBlocks = `${refBlock}${amountBlock}${tripBlock}${stripeNote}${receiptBlock}${contactHtml}`;
 
   const html = shellHtml({
     preheader: `${subject} — ${commercialName}`,
@@ -971,6 +980,7 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
   if (opts.leadReference) textLines.push(`Référence demande : ${opts.leadReference}`);
   if (opts.tripSummary?.trim()) textLines.push("", `Rappel trajet : ${opts.tripSummary.trim()}`);
   textLines.push("", "Le paiement a été traité de manière sécurisée par Stripe.", "");
+  if (opts.receiptUrl?.trim()) textLines.push(`Reçu Stripe : ${opts.receiptUrl.trim()}`, "");
   if (opts.vtcPhone?.trim()) textLines.push(`Téléphone : ${opts.vtcPhone.trim()}`);
   if (opts.vtcEmail?.trim()) textLines.push(`E-mail : ${opts.vtcEmail.trim()}`);
   textLines.push("", commercialName, site);
@@ -986,6 +996,7 @@ export function buildPaymentConfirmationOperatorEmail(opts: {
   leadReference: string;
   paymentModeLabel: string;
   proUrl?: string;
+  receiptUrl?: string | null;
 }): { subject: string; html: string; text: string } {
   const commercialName = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
@@ -1026,7 +1037,10 @@ export function buildPaymentConfirmationOperatorEmail(opts: {
         section: "pricing",
       },
     ]),
-    cta: opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : undefined,
+    cta:
+      [opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : "", opts.receiptUrl?.trim() ? buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim()) : ""]
+        .filter(Boolean)
+        .join(`<span style="display:inline-block;width:14px"></span>`) || undefined,
     footerSite: site,
     footerText: "Notification opérateur — paiement",
   });
@@ -1042,6 +1056,7 @@ export function buildPaymentConfirmationOperatorEmail(opts: {
     `Montant payé : ${opts.amountFormatted}`,
     `Mode : ${opts.paymentModeLabel}`,
     opts.proUrl ? `Tableau de bord : ${opts.proUrl}` : "",
+    opts.receiptUrl?.trim() ? `Reçu Stripe : ${opts.receiptUrl.trim()}` : "",
     "",
     site,
   ]

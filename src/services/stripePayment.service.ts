@@ -37,6 +37,8 @@ export type CreateLeadPaymentLinkInput = {
   mode: PaymentMode;
   sendEmail?: boolean;
   message?: string;
+  /** Si true : annule les paiements en attente / lien ouvert pour cette demande et force une nouvelle session Checkout. */
+  forceNewCheckoutSession?: boolean;
 };
 
 export type CreateLeadPaymentLinkResult = {
@@ -47,6 +49,8 @@ export type CreateLeadPaymentLinkResult = {
   currency: string;
   applicationFeeAmount: number;
   created: boolean;
+  /** true lorsque l’URL renvoyée provient d’une session encore valide (aucune nouvelle session créée). */
+  reusedExistingCheckout: boolean;
 };
 
 function requireStripe(): NonNullable<ReturnType<typeof getStripeClient>> {
@@ -61,17 +65,25 @@ function requireStripe(): NonNullable<ReturnType<typeof getStripeClient>> {
   return stripe;
 }
 
+/** Stripe remplace {CHECKOUT_SESSION_ID} ; si absent de l’URL env, on l’ajoute en query. */
+function normalizeStripeSuccessUrl(raw: string): string {
+  const u = raw.trim();
+  if (u.includes("{CHECKOUT_SESSION_ID}")) return u;
+  const sep = u.includes("?") ? "&" : "?";
+  return `${u}${sep}session_id={CHECKOUT_SESSION_ID}`;
+}
+
 function requirePaymentUrls(): { successUrl: string; cancelUrl: string } {
-  const successUrl = process.env.STRIPE_PAYMENT_SUCCESS_URL?.trim();
+  const successRaw = process.env.STRIPE_PAYMENT_SUCCESS_URL?.trim();
   const cancelUrl = process.env.STRIPE_PAYMENT_CANCEL_URL?.trim();
-  if (!successUrl || !cancelUrl) {
+  if (!successRaw || !cancelUrl) {
     throw new PaymentLinkError(
       "STRIPE_PAYMENT_URLS_NOT_CONFIGURED",
       "URLs de retour paiement Stripe manquantes côté API.",
       503
     );
   }
-  return { successUrl, cancelUrl };
+  return { successUrl: normalizeStripeSuccessUrl(successRaw), cancelUrl };
 }
 
 /**
@@ -221,6 +233,17 @@ export class StripePaymentService {
       );
     }
 
+    if (input.forceNewCheckoutSession) {
+      await prisma.payment.updateMany({
+        where: {
+          tenantId: input.tenantId,
+          leadRequestId: input.leadRequestId,
+          status: { in: [PaymentStatus.LINK_SENT, PaymentStatus.PENDING] },
+        },
+        data: { status: PaymentStatus.CANCELLED },
+      });
+    }
+
     const applicationFeeAmount = tenant.platformApplicationFeeAmount;
     const { totalCents, chargeCents } = resolveLeadPaymentAmountCents(lead, input.mode, tenant);
     validateChargeAndFee(chargeCents, applicationFeeAmount);
@@ -263,6 +286,7 @@ export class StripePaymentService {
         currency: openLink.currency,
         applicationFeeAmount: openLink.applicationFeeAmount,
         created: false,
+        reusedExistingCheckout: true,
       };
     }
 
@@ -380,6 +404,7 @@ export class StripePaymentService {
         currency: "eur",
         applicationFeeAmount,
         created: true,
+        reusedExistingCheckout: false,
       };
     } catch (e) {
       await prisma.payment.update({
