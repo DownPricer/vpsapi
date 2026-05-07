@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { PaymentStatus } from "@prisma/client";
+import { PaymentStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 
@@ -60,7 +60,20 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
   };
 
   try {
-    const [items, total, aggPaid, pendingCheckoutCount] = await Promise.all([
+    const chartFrom = new Date();
+    chartFrom.setMonth(chartFrom.getMonth() - 5);
+    chartFrom.setDate(1);
+    chartFrom.setHours(0, 0, 0, 0);
+
+    const [
+      items,
+      total,
+      aggPaid,
+      pendingCheckoutCount,
+      failedCount,
+      expiredCount,
+      monthlyPaidRows,
+    ] = await Promise.all([
       prisma.payment.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -90,7 +103,27 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
           status: { in: [PaymentStatus.LINK_SENT, PaymentStatus.PENDING] },
         },
       }),
+      prisma.payment.count({ where: { ...where, status: PaymentStatus.FAILED } }),
+      prisma.payment.count({ where: { ...where, status: PaymentStatus.EXPIRED } }),
+      prisma.$queryRaw<Array<{ ym: Date; total: bigint }>>(
+        Prisma.sql`
+          SELECT date_trunc('month', "paidAt") AS ym, SUM(amount) AS total
+          FROM "Payment"
+          WHERE "tenantId" = ${tenantId}
+            AND status = 'PAID'
+            AND "paidAt" IS NOT NULL
+            AND "paidAt" >= ${chartFrom}
+          GROUP BY 1
+          ORDER BY 1 ASC
+        `
+      ),
     ]);
+
+    const monthlyPaid = monthlyPaidRows.map((row) => ({
+      monthKey: row.ym.toISOString().slice(0, 7),
+      monthLabel: row.ym.toLocaleDateString("fr-FR", { month: "short", year: "numeric" }),
+      totalCents: Number(row.total),
+    }));
 
     res.json({
       success: true,
@@ -111,7 +144,10 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
           paidTotalCents: aggPaid._sum.amount ?? 0,
           paidCount: aggPaid._count,
           pendingCheckoutCount,
+          failedCount,
+          expiredCount,
         },
+        monthlyPaid,
       },
     });
   } catch (e) {

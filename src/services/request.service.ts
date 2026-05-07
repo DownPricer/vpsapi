@@ -1,4 +1,5 @@
 import type { LeadKind, LeadRequest, LeadStatus, Prisma } from "@prisma/client";
+import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 
 export type CreateLeadInput = {
@@ -194,7 +195,7 @@ export class RequestService {
     const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [pendingCount, acceptedToday, upcomingReservationCount, recentDevisWeekCount, recent] =
+    const [pendingCount, acceptedToday, upcomingReservationCount, recentDevisWeekCount, recent, stripePaymentsPendingCount] =
       await Promise.all([
         prisma.leadRequest.count({
           where: { tenantId, status: { in: ["pending", "new"] } },
@@ -227,6 +228,12 @@ export class RequestService {
           orderBy: { createdAt: "desc" },
           take: 10,
         }),
+        prisma.payment.count({
+          where: {
+            tenantId,
+            status: { in: [PaymentStatus.LINK_SENT, PaymentStatus.PENDING] },
+          },
+        }),
       ]);
 
     return {
@@ -234,6 +241,7 @@ export class RequestService {
       acceptedToday,
       upcomingReservationCount,
       recentDevisWeekCount,
+      stripePaymentsPendingCount,
       recent,
     };
   }
