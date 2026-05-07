@@ -4,6 +4,7 @@ import {
   calculerDistances,
   calculerTarif,
   normalizeTypeService,
+  resolvePricingEngineForRequest,
   serializeTarifResult,
 } from "../modules/pricing";
 import {
@@ -36,6 +37,9 @@ export async function runPricingPipeline(
   typeKey: ServiceTypeKey;
   distances: Distances;
   result: TarifResult;
+  engine: TenantConfig["pricingEngine"];
+  pricingConfigSource: "tenant_engine" | "payload_pricing_config";
+  pricingConfigVersion?: string;
   pricingDebug?: PricingDebugBreakdown;
 }> {
   const apiKey = requireDistanceMatrixKey();
@@ -44,7 +48,8 @@ export async function runPricingPipeline(
     const raw = (body?.general as Record<string, unknown>)?.TypeService;
     throw new Error(`Type de service inconnu : ${String(raw ?? "")}`);
   }
-  const engine = tenant.pricingEngine;
+  const resolvedPricing = resolvePricingEngineForRequest(tenant, body);
+  const engine = resolvedPricing.engine;
   const distances = await calculerDistances(apiKey, body, engine);
   const result = await calculerTarif(typeKey, body, distances, engine);
   let pricingDebug: PricingDebugBreakdown | undefined;
@@ -58,7 +63,15 @@ export async function runPricingPipeline(
       result,
     });
   }
-  return { typeKey, distances, result, pricingDebug };
+  return {
+    typeKey,
+    distances,
+    result,
+    engine,
+    pricingConfigSource: resolvedPricing.source,
+    pricingConfigVersion: resolvedPricing.pricingConfigVersion,
+    pricingDebug,
+  };
 }
 
 export class PricingService {
@@ -70,8 +83,13 @@ export class PricingService {
     tenant: TenantConfig,
     body: Record<string, unknown>,
     opts?: { includeDebug?: boolean }
-  ): Promise<{ serialized: Record<string, unknown>; pricingDebug?: PricingDebugBreakdown }> {
-    const { result, pricingDebug } = await runPricingPipeline(tenant, body, opts);
-    return { serialized: serializeTarifResult(result), pricingDebug };
+  ): Promise<{
+    serialized: Record<string, unknown>;
+    pricingDebug?: PricingDebugBreakdown;
+    pricingConfigSource: "tenant_engine" | "payload_pricing_config";
+    pricingConfigVersion?: string;
+  }> {
+    const { result, pricingDebug, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, opts);
+    return { serialized: serializeTarifResult(result), pricingDebug, pricingConfigSource, pricingConfigVersion };
   }
 }

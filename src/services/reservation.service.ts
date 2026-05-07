@@ -22,6 +22,21 @@ export interface ReservationSuccess {
 export class ReservationService {
   private requestService = new RequestService();
 
+  private buildRawPayloadForStorage(
+    body: Record<string, unknown>,
+    meta: { pricingConfigSource: "tenant_engine" | "payload_pricing_config"; pricingConfigVersion?: string }
+  ): Record<string, unknown> {
+    if (!("pricingConfig" in body)) return body;
+    const { pricingConfig: _ignoredPricingConfig, ...rest } = body;
+    return {
+      ...rest,
+      pricingConfigMeta: {
+        source: meta.pricingConfigSource,
+        version: meta.pricingConfigVersion ?? "unknown",
+      },
+    };
+  }
+
   async processReservation(
     tenant: TenantConfig,
     body: Record<string, unknown>,
@@ -32,8 +47,11 @@ export class ReservationService {
       throw new Error(clientParsed.message);
     }
 
-    const { result, pricingDebug } = await runPricingPipeline(tenant, body, { includeDebug });
-    const engine = tenant.pricingEngine;
+    const { result, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, { includeDebug });
+    const rawPayloadForStorage = this.buildRawPayloadForStorage(body, {
+      pricingConfigSource,
+      pricingConfigVersion,
+    });
 
     const paymentMethod =
       (body?.general as Record<string, string>)?.PaymentMethode ||
@@ -60,7 +78,7 @@ export class ReservationService {
       clientName: `${lead.Prenom} ${lead.Nom}`.trim(),
       clientPhone: lead.Telephone,
       clientEmail: lead.Email,
-      rawPayload: body as Prisma.InputJsonValue,
+      rawPayload: rawPayloadForStorage as Prisma.InputJsonValue,
       flatPayload: lead as Prisma.InputJsonValue,
       pricingResult: result as unknown as Prisma.InputJsonValue,
       sourceSite: tenant.branding?.siteUrl,

@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { PricingConfigRequestError } from "../modules/pricing";
 import { PricingService } from "../services/pricing.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
@@ -20,16 +21,32 @@ export async function postCalculerTarif(
 
   try {
     const includeDebug = isPricingDebugAuthorized(req);
-    const { serialized, pricingDebug } = await pricingService.computeTariffForRequest(
+    const { serialized, pricingDebug, pricingConfigSource, pricingConfigVersion } = await pricingService.computeTariffForRequest(
       req.tenant,
       parsed.data,
       { includeDebug }
     );
     sendSuccess(res, serialized, {
       tenantId: req.tenantId,
-      ...(pricingDebug ? { pricingDebug } : {}),
+      ...(pricingDebug
+        ? {
+            pricingDebug: {
+              ...pricingDebug,
+              pricingConfigSource,
+              ...(pricingConfigVersion ? { pricingConfigVersion } : {}),
+            },
+          }
+        : {}),
     });
   } catch (e) {
+    if (e instanceof PricingConfigRequestError) {
+      sendValidationError(
+        res,
+        e.message,
+        process.env.NODE_ENV === "production" ? undefined : e.details
+      );
+      return;
+    }
     const message = e instanceof Error ? e.message : String(e);
     if (message.startsWith("Type de service inconnu") || message.includes("Type de service")) {
       sendValidationError(res, message);

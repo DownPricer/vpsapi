@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { PricingConfigRequestError } from "../modules/pricing";
 import { QuoteService } from "../services/quote.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
@@ -23,6 +24,14 @@ export async function postDevis(req: Request, res: Response, next: NextFunction)
       ...(pricingDebug ? { pricingDebug } : {}),
     });
   } catch (e) {
+    if (e instanceof PricingConfigRequestError) {
+      sendValidationError(
+        res,
+        e.message,
+        process.env.NODE_ENV === "production" ? undefined : e.details
+      );
+      return;
+    }
     const message = e instanceof Error ? e.message : String(e);
     if (
       message.startsWith("Type de service inconnu") ||

@@ -9,6 +9,34 @@ export {
   resolveVtcBaseAddress,
 } from "./calculator";
 export { serializeTarifResult } from "./serialize";
+export type {
+  PricingConfigPayload,
+  DistanceRule,
+  ApproachConfig,
+  ReturnBaseConfig,
+  ZoneDistanceBand,
+  OutOfZoneRule,
+  AirportPriceRule,
+  HourlyHireRule,
+  SurchargeRule,
+  DiscountRule,
+  CityRule,
+  OptionRule,
+  PassengerBagPolicy,
+  RoundingMode,
+} from "./payloadConfig.types";
+export {
+  validatePricingConfigPayload,
+  PricingConfigValidationError,
+  PRICING_CONFIG_MAX_SERIALIZED_BYTES,
+} from "./validatePricingConfigPayload";
+export { mapEngineToPricingConfig } from "./mapEngineToPricingConfig";
+export { mapPricingConfigToEngine } from "./mapPricingConfigToEngine";
+export {
+  resolvePricingEngineForRequest,
+  PricingConfigRequestError,
+  type PricingConfigSource,
+} from "./resolvePricingEngineForRequest";
 export {
   normalizeTypeService,
   normalizeTCtrajet,

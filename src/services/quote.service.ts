@@ -23,6 +23,21 @@ export interface DevisSuccess {
 export class QuoteService {
   private requestService = new RequestService();
 
+  private buildRawPayloadForStorage(
+    body: Record<string, unknown>,
+    meta: { pricingConfigSource: "tenant_engine" | "payload_pricing_config"; pricingConfigVersion?: string }
+  ): Record<string, unknown> {
+    if (!("pricingConfig" in body)) return body;
+    const { pricingConfig: _ignoredPricingConfig, ...rest } = body;
+    return {
+      ...rest,
+      pricingConfigMeta: {
+        source: meta.pricingConfigSource,
+        version: meta.pricingConfigVersion ?? "unknown",
+      },
+    };
+  }
+
   async processDevis(
     tenant: TenantConfig,
     body: Record<string, unknown>,
@@ -33,10 +48,13 @@ export class QuoteService {
       throw new Error(clientParsed.message);
     }
 
-    const { result, distances, pricingDebug } = await runPricingPipeline(tenant, body, {
+    const { result, distances, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, {
       includeDebug,
     });
-    const engine = tenant.pricingEngine;
+    const rawPayloadForStorage = this.buildRawPayloadForStorage(body, {
+      pricingConfigSource,
+      pricingConfigVersion,
+    });
 
     const lead = buildDevisPayload({
       payload: body,
@@ -53,7 +71,7 @@ export class QuoteService {
       clientName: `${lead.Prenom} ${lead.Nom}`.trim(),
       clientPhone: lead.Telephone,
       clientEmail: lead.Email,
-      rawPayload: body as Prisma.InputJsonValue,
+      rawPayload: rawPayloadForStorage as Prisma.InputJsonValue,
       flatPayload: lead as Prisma.InputJsonValue,
       pricingResult: result as unknown as Prisma.InputJsonValue,
       sourceSite: tenant.branding?.siteUrl,
