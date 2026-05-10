@@ -209,6 +209,8 @@ export function buildPricingDebugBreakdown(input: {
 
   const rulesApplied: string[] = [
     `Moteur : timezone=${engine.timezone}`,
+    `Trajet classique : approche (base→prise en charge) + trajet client + retour dépôt (destination→base) sont tous facturés (coeff. APPROCHE sur les deux segments base)`,
+    `Trajet classique : grille €/km (zone) basée sur la distance du trajet client (max aller/retour en A/R)`,
     `Zone service préférentielle : ${engine.primaryServiceZoneSetId}`,
     `Coeff. hors zone : ×${engine.outOfPrimaryServiceZoneMultiplier}`,
     `Remise A/R moteur : ${engine.applyArDiscount ? "oui (-5 % si applicable)" : "non"}`,
