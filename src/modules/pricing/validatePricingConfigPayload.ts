@@ -16,7 +16,8 @@ const FORBIDDEN_KEY_NAMES_LOWER = new Set([
 ]);
 
 const MAX_ARRAY_ITEMS_DEFAULT = 200;
-const MAX_ARRAY_ITEMS_RULES = 500;
+/** Plafond Zod pour les tableaux volumineux (ex. `classicTrip.zoneBands`, règles distance). */
+export const MAX_ARRAY_ITEMS_RULES = 500;
 
 const finiteNonNegative = z.number().finite().min(0);
 const boundedPercent = z.number().finite().min(0).max(100);
@@ -127,6 +128,8 @@ const pricingConfigPayloadSchema = z
       .object({
         enabled: z.boolean(),
         zoneBands: z.array(zoneDistanceBandSchema).max(MAX_ARRAY_ITEMS_RULES),
+        /** Minimums / grilles AR — voir `payloadConfig.types` */
+        zoneBandsRoundTrip: z.array(zoneDistanceBandSchema).max(MAX_ARRAY_ITEMS_RULES).optional(),
         distanceRulesOneWay: z.array(distanceRuleSchema).max(MAX_ARRAY_ITEMS_RULES),
         distanceRulesRoundTrip: z.array(distanceRuleSchema).max(MAX_ARRAY_ITEMS_RULES),
         approach: z.object({

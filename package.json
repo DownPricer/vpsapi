@@ -15,7 +15,8 @@
     "verify:emails": "tsx scripts/verify-lead-emails.ts",
     "verify:pricing-config-mapping": "tsx src/scripts/verifyPricingConfigMapping.ts",
     "verify:pricing-config-roundtrip": "tsx src/scripts/verifyPricingConfigRoundtrip.ts",
-    "verify:classic-base-segments": "tsx src/scripts/verifyClassicBaseSegments.ts"
+    "verify:classic-base-segments": "tsx src/scripts/verifyClassicBaseSegments.ts",
+    "verify:tenant-vs-pricing-config": "tsx src/scripts/verifyTenantEnginePricingConfigParity.ts"
   },
   "engines": {
     "node": ">=20"

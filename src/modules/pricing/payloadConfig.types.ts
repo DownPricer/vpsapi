@@ -135,6 +135,11 @@ export type PricingConfigPayload = {
     zoneBands: ZoneDistanceBand[];
     distanceRulesOneWay: DistanceRule[];
     distanceRulesRoundTrip: DistanceRule[];
+    /**
+     * Bandeaux de zone pour les minimums / grilles **aller-retour** (tcTable.AR).
+     * Si absent, on retombe sur `zoneBands` (risque d’écarts vs moteur JSON si SIMPLE.min ≠ AR.min).
+     */
+    zoneBandsRoundTrip?: ZoneDistanceBand[];
     approach: ApproachConfig;
     returnToBase: ReturnBaseConfig;
     outOfPrimaryZone: OutOfZoneRule;

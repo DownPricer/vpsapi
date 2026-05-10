@@ -1,5 +1,28 @@
 import type { TenantPricingEngineConfig } from "./engineTypes";
 import type { PricingConfigPayload } from "./payloadConfig.types";
+import { getPrimaryServiceZoneCommunes } from "./zoneSets/registry";
+
+/** Aligné sur `default.engine.json` et `buildPricingConfigForTenant` si `zoneSetId` est absent du payload. */
+const DEFAULT_LEGACY_PRIMARY_ZONE_SET_ID = "fr-76";
+
+function resolveOutOfPrimaryZoneEngineParams(
+  outOfPrimary: PricingConfigPayload["classicTrip"]["outOfPrimaryZone"]
+): { multiplier: number; zoneSetId: string } {
+  const configuredMult =
+    !outOfPrimary.enabled ? 1 : outOfPrimary.mode === "multiplier" ? outOfPrimary.value : 1;
+
+  const trimmed = outOfPrimary.zoneSetId?.trim();
+  if (trimmed && getPrimaryServiceZoneCommunes(trimmed) !== undefined) {
+    return { multiplier: configuredMult, zoneSetId: trimmed };
+  }
+
+  if (!trimmed) {
+    return { multiplier: configuredMult, zoneSetId: DEFAULT_LEGACY_PRIMARY_ZONE_SET_ID };
+  }
+
+  /* Identifiant inconnu du registre : ne pas appliquer ×valeur à toutes les courses. */
+  return { multiplier: 1, zoneSetId: trimmed };
+}
 
 function buildBandKey(fromKm?: number, toKm?: number): string {
   if (fromKm !== undefined && toKm !== undefined) return `${fromKm}-${toKm}`;
@@ -119,17 +142,15 @@ function buildAirportsAndTaTable(payload: PricingConfigPayload): {
 
 export function mapPricingConfigToEngine(payload: PricingConfigPayload): TenantPricingEngineConfig {
   const simpleZones = buildTcZones(payload.classicTrip.distanceRulesOneWay, payload.classicTrip.zoneBands);
-  const arZones = buildTcZones(payload.classicTrip.distanceRulesRoundTrip, payload.classicTrip.zoneBands);
+  const arZoneBands = payload.classicTrip.zoneBandsRoundTrip ?? payload.classicTrip.zoneBands;
+  const arZones = buildTcZones(payload.classicTrip.distanceRulesRoundTrip, arZoneBands);
   const { airports, taTable } = buildAirportsAndTaTable(payload);
   const roundTripDiscount = payload.discounts.find(
     (d) => d.enabled && d.trigger === "round_trip" && d.mode === "percent" && d.value > 0
   );
 
   const outOfPrimary = payload.classicTrip.outOfPrimaryZone;
-  // TODO: mode=fixed_surcharge ne peut pas etre traduit 1:1 avec l'algo actuel (attend un multiplicateur).
-  const outOfPrimaryMultiplier =
-    outOfPrimary.mode === "multiplier" ? outOfPrimary.value : 1;
-
+  const outPrimaryResolved = resolveOutOfPrimaryZoneEngineParams(outOfPrimary);
   return {
     timezone: payload.timezone,
     depotAddress: payload.vtcBaseAddress,
@@ -151,8 +172,8 @@ export function mapPricingConfigToEngine(payload: PricingConfigPayload): TenantP
     },
     maj: buildMaj(payload),
     applyArDiscount: Boolean(roundTripDiscount),
-    outOfPrimaryServiceZoneMultiplier: outOfPrimaryMultiplier,
-    primaryServiceZoneSetId: outOfPrimary.zoneSetId ?? "custom-payload",
+    outOfPrimaryServiceZoneMultiplier: outPrimaryResolved.multiplier,
+    primaryServiceZoneSetId: outPrimaryResolved.zoneSetId,
     madHourlyRates: buildMadHourlyRates(payload),
     madEventMinimumTotal: payload.hourlyHire.minimumTotal ?? 0,
     // TODO: le payload v1 n'expose pas encore ce champ; valeur neutre conservée.

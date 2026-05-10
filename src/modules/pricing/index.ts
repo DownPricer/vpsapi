@@ -29,6 +29,7 @@ export {
   validatePricingConfigPayload,
   PricingConfigValidationError,
   PRICING_CONFIG_MAX_SERIALIZED_BYTES,
+  MAX_ARRAY_ITEMS_RULES,
 } from "./validatePricingConfigPayload";
 export { mapEngineToPricingConfig } from "./mapEngineToPricingConfig";
 export { mapPricingConfigToEngine } from "./mapPricingConfigToEngine";

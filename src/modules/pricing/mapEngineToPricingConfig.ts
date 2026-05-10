@@ -201,17 +201,18 @@ export function mapEngineToPricingConfig(
     classicTrip: {
       enabled: true,
       zoneBands: buildZoneBands(engine.tcTable.SIMPLE.ZONES),
+      zoneBandsRoundTrip: buildZoneBands(engine.tcTable.AR.ZONES),
       distanceRulesOneWay: buildDistanceRules(engine.tcTable.SIMPLE.ZONES, "SIMPLE"),
       distanceRulesRoundTrip: buildDistanceRules(engine.tcTable.AR.ZONES, "AR"),
       approach: {
         enabled: true,
-        mode: "min_of_approach_or_return_base",
+        mode: "always_approach",
         pricePerKm: engine.tcTable.SIMPLE.APPROCHE,
       },
       returnToBase: {
         enabled: true,
-        mode: "min_of_approach_or_return_base",
-        // L'algo actuel utilise le coef APPROCHE pour retour base.
+        mode: "always_return_base",
+        // L'algo facture retour base au même €/km que l'approche.
         pricePerKm: engine.tcTable.SIMPLE.APPROCHE,
       },
       outOfPrimaryZone: {
