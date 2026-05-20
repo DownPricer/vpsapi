@@ -60,6 +60,15 @@ function zoneFromDistance(d: number): number {
   return 5;
 }
 
+function firstKmRate(table: Record<string, number>): number {
+  return (
+    table["1-50"] ??
+    table["0-999999"] ??
+    Object.values(table).find((v) => typeof v === "number" && v > 0) ??
+    2.0
+  );
+}
+
 function kmTarifClassique(
   distKm: number,
   zone: number,
@@ -67,17 +76,25 @@ function kmTarifClassique(
   engine: TenantPricingEngineConfig
 ): number {
   const zones = isAR ? engine.tcTable.AR.ZONES : engine.tcTable.SIMPLE.ZONES;
-  const zoneConfig = zones[zone as keyof typeof zones];
+  let zoneConfig = zones[zone as keyof typeof zones];
+  if (!zoneConfig && zones[1 as keyof typeof zones]) {
+    zoneConfig = zones[1 as keyof typeof zones];
+  }
+  if (!zoneConfig) {
+    const firstKey = Object.keys(zones).map(Number).sort((a, b) => a - b)[0];
+    if (firstKey != null) zoneConfig = zones[firstKey as keyof typeof zones];
+  }
   if (!zoneConfig) return 2.0;
   const table = zoneConfig.tarifsKm as Record<string, number>;
-  if (distKm <= 50) return table["1-50"] ?? 2.0;
-  if (distKm <= 90) return table["51-90"] ?? 1.8;
+  const fallback = firstKmRate(table);
+  if (distKm <= 50) return table["1-50"] ?? fallback;
+  if (distKm <= 90) return table["51-90"] ?? fallback;
   if (zone === 5) {
-    if (distKm <= 200) return table["91-200"] ?? 1.8;
-    return table["+200"] ?? 1.6;
+    if (distKm <= 200) return table["91-200"] ?? fallback;
+    return table["+200"] ?? fallback;
   }
-  if (distKm <= 150) return table["91-150"] ?? 1.6;
-  return table["+150"] ?? 1.4;
+  if (distKm <= 150) return table["91-150"] ?? fallback;
+  return table["+150"] ?? fallback;
 }
 
 function ceil5(x: number): number {
@@ -381,7 +398,9 @@ export async function calculerTarif(
           tarifHoraireMAD * (parseFloat(t?.HeureMADClassique ?? "0") || 0);
         total += tarifs.miseADisposition as number;
       }
-      if (engine.applyArDiscount) total = total * 0.95;
+      if (engine.applyArDiscount && engine.arDiscountPercent > 0) {
+        total = total * (1 - engine.arDiscountPercent / 100);
+      }
     }
 
     const dtAller = parseDT(t?.TCallerdate, t?.TCallerheure);
@@ -416,7 +435,15 @@ export async function calculerTarif(
 
     const zones = isAR ? engine.tcTable.AR.ZONES : engine.tcTable.SIMPLE.ZONES;
     const zoneConfig = zones[zone as keyof typeof zones];
-    const minZone = zoneConfig?.min ?? 0;
+    let minZone = zoneConfig?.min ?? 0;
+    if (minZone <= 0 && zones[1 as keyof typeof zones]) {
+      minZone = zones[1 as keyof typeof zones].min;
+    }
+    if (minZone <= 0) {
+      for (const z of Object.values(zones)) {
+        minZone = Math.max(minZone, z.min);
+      }
+    }
     tarifs.total = Math.max(total, minZone);
 
     majorations.push({ leg: "aller", montant: tarifs.majAller as number });
@@ -452,7 +479,12 @@ export async function calculerTarif(
     const taForAirport = engine.taTable[airportCode] ?? engine.taTable.ORY;
     const cfg =
       taForAirport?.[cfgType]?.[plage] ??
-      engine.taTable.ORY[cfgType][plage];
+      engine.taTable.ORY?.[cfgType]?.[plage];
+    if (!cfg) {
+      throw new Error(
+        `Grille aéroport introuvable (${airportCode} / ${cfgType} / ${plage}). Vérifier airportTransfers.rules.`
+      );
+    }
     const k = cfg.tarifKm;
 
     (tarifs.aller as Record<string, number>).approche =

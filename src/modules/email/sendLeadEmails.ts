@@ -1,4 +1,4 @@
-import type { TenantConfig } from "../../types/tenant";
+ import type { TenantConfig } from "../../types/tenant";
 import { buildCustomerConfirmation, buildOperatorEmail } from "./formatLeadEmail";
 import { assertSmtpConnection, resolveMailFrom, sendSmtpMessage } from "./smtp";
 

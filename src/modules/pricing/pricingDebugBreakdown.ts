@@ -213,7 +213,7 @@ export function buildPricingDebugBreakdown(input: {
     `Trajet classique : grille €/km (zone) basée sur la distance du trajet client (max aller/retour en A/R)`,
     `Zone service préférentielle : ${engine.primaryServiceZoneSetId}`,
     `Coeff. hors zone : ×${engine.outOfPrimaryServiceZoneMultiplier}`,
-    `Remise A/R moteur : ${engine.applyArDiscount ? "oui (-5 % si applicable)" : "non"}`,
+    `Remise A/R moteur : ${engine.applyArDiscount && engine.arDiscountPercent > 0 ? `oui (-${engine.arDiscountPercent} % trajet classique A/R)` : "non"}`,
     `Minimum MAD (config) : ${engine.madEventMinimumTotal} €`,
   ];
 

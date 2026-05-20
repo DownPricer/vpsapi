@@ -24,10 +24,19 @@ function resolveOutOfPrimaryZoneEngineParams(
   return { multiplier: 1, zoneSetId: trimmed };
 }
 
+/** Tranches lues par `kmTarifClassique` dans calculator.ts */
+const STANDARD_KM_BAND_KEYS = ["1-50", "51-90", "91-150", "+150", "91-200", "+200"] as const;
+
 function buildBandKey(fromKm?: number, toKm?: number): string {
   if (fromKm !== undefined && toKm !== undefined) return `${fromKm}-${toKm}`;
   if (fromKm !== undefined) return `+${fromKm}`;
   return "0-999999";
+}
+
+function resolveZoneIdFromBand(zoneId: string): number {
+  const num = Number(zoneId);
+  if (Number.isFinite(num) && num >= 1) return Math.floor(num);
+  return 1;
 }
 
 function parseZoneIdFromRuleIdOrLabel(rule: { id: string; label: string }): number | null {
@@ -45,20 +54,38 @@ function buildTcZones(
   const zonesById = new Map<number, { min: number; tarifsKm: Record<string, number> }>();
 
   for (const band of zoneBands) {
-    const zoneIdNum = Number(band.zoneId);
-    if (!Number.isFinite(zoneIdNum)) continue;
+    const zoneIdNum = resolveZoneIdFromBand(band.zoneId);
+    const existing = zonesById.get(zoneIdNum);
     zonesById.set(zoneIdNum, {
-      min: band.minimumPrice,
-      tarifsKm: {},
+      min: Math.max(existing?.min ?? 0, band.minimumPrice),
+      tarifsKm: existing?.tarifsKm ?? {},
     });
   }
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
-    const zoneId = parseZoneIdFromRuleIdOrLabel(rule);
-    if (zoneId == null || !zonesById.has(zoneId)) continue;
+    let zoneId = parseZoneIdFromRuleIdOrLabel(rule);
+    if (zoneId == null) zoneId = 1;
+
+    if (!zonesById.has(zoneId)) {
+      zonesById.set(zoneId, {
+        min: rule.minimumPrice ?? 0,
+        tarifsKm: {},
+      });
+    } else {
+      const z = zonesById.get(zoneId)!;
+      z.min = Math.max(z.min, rule.minimumPrice ?? 0);
+    }
+
+    const zone = zonesById.get(zoneId)!;
     const key = buildBandKey(rule.fromKm, rule.toKm);
-    zonesById.get(zoneId)!.tarifsKm[key] = rule.pricePerKm;
+    if (rule.fromKm === undefined && rule.toKm === undefined) {
+      for (const bandKey of STANDARD_KM_BAND_KEYS) {
+        zone.tarifsKm[bandKey] = rule.pricePerKm;
+      }
+    } else {
+      zone.tarifsKm[key] = rule.pricePerKm;
+    }
   }
 
   const out: Record<number, { min: number; tarifsKm: Record<string, number> }> = {};
@@ -172,6 +199,10 @@ export function mapPricingConfigToEngine(payload: PricingConfigPayload): TenantP
     },
     maj: buildMaj(payload),
     applyArDiscount: Boolean(roundTripDiscount),
+    arDiscountPercent:
+      roundTripDiscount && roundTripDiscount.mode === "percent"
+        ? Math.min(100, Math.max(0, roundTripDiscount.value))
+        : 0,
     outOfPrimaryServiceZoneMultiplier: outPrimaryResolved.multiplier,
     primaryServiceZoneSetId: outPrimaryResolved.zoneSetId,
     madHourlyRates: buildMadHourlyRates(payload),

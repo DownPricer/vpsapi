@@ -51,6 +51,7 @@ export const tenantPricingEngineJsonSchema = z.object({
     minEuros: z.number(),
   }),
   applyArDiscount: z.boolean(),
+  arDiscountPercent: z.number().min(0).max(100).optional(),
   outOfPrimaryServiceZoneMultiplier: z.number(),
   primaryServiceZoneSetId: z.string().min(1),
   madHourlyRates: z.object({
@@ -63,5 +64,12 @@ export const tenantPricingEngineJsonSchema = z.object({
 });
 
 export function parsePricingEngineJson(raw: unknown): TenantPricingEngineConfig {
-  return tenantPricingEngineJsonSchema.parse(raw) as TenantPricingEngineConfig;
+  const parsed = tenantPricingEngineJsonSchema.parse(raw);
+  const arDiscountPercent =
+    typeof parsed.arDiscountPercent === "number"
+      ? parsed.arDiscountPercent
+      : parsed.applyArDiscount
+        ? 5
+        : 0;
+  return { ...parsed, arDiscountPercent } as TenantPricingEngineConfig;
 }

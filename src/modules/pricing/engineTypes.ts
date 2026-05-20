@@ -52,6 +52,8 @@ export interface TenantPricingEngineConfig {
   tcTable: TcTable;
   maj: MajConfig;
   applyArDiscount: boolean;
+  /** Pourcentage de remise aller-retour (ex. 5 → total × 0,95). 0 si désactivée. */
+  arDiscountPercent: number;
   outOfPrimaryServiceZoneMultiplier: number;
   /**
    * Identifiant de jeu de communes (slugs normalisés) pour la zone « préférentielle ».
