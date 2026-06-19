@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import { loadEnv } from "./config/env";
 import { postStripeWebhook } from "./controllers/stripeWebhook.controller";
+import { jsonUtf8Middleware } from "./middleware/jsonUtf8";
 import { errorHandler } from "./middleware/errorHandler";
 import { tenantMiddleware } from "./middleware/tenant";
 import { healthRoutes } from "./routes/health.routes";
@@ -17,6 +18,7 @@ export function createApp(): express.Application {
     credentials: true,
   };
   app.use(cors(corsOptions));
+  app.use(jsonUtf8Middleware);
   /** Stripe webhook : body brut obligatoire pour la signature — avant express.json(). */
   app.post(
     "/api/stripe/webhook",

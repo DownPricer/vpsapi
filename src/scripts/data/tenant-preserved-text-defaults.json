@@ -1,0 +1,37 @@
+{
+  "contact": {
+    "whatsappPrefillText": "Bonjour, je souhaite réserver un trajet.",
+    "address": {
+      "street": "Adresse à compléter",
+      "city": "Ville"
+    }
+  },
+  "vehicles": {
+    "featured": {
+      "highlightText": "4 passagers max · Climatisation · Sièges confortables · Bagages inclus",
+      "paymentChips": ["CB", "Virement", "Espèces", "Chèque"],
+      "gallery": [
+        { "alt": "Renault Espace 5 – Service VTC", "tag": "Votre véhicule" },
+        { "alt": "Transfert aéroport premium", "tag": "Aéroport" },
+        { "alt": "Trajet longue distance", "tag": "Longue distance" },
+        { "alt": "Service VTC clé en main", "tag": "Premium" },
+        { "alt": "Mise à disposition chauffeur", "tag": "Mise à dispo" },
+        { "alt": "Confort & discrétion", "tag": "Confort" }
+      ]
+    },
+    "items": [
+      {
+        "highlightText": "4 passagers max · Climatisation · Sièges confortables · Bagages inclus",
+        "paymentChips": ["CB", "Virement", "Espèces", "Chèque"],
+        "gallery": [
+          { "alt": "Renault Espace 5 – Service VTC", "tag": "Votre véhicule" },
+          { "alt": "Transfert aéroport premium", "tag": "Aéroport" },
+          { "alt": "Trajet longue distance", "tag": "Longue distance" },
+          { "alt": "Service VTC clé en main", "tag": "Premium" },
+          { "alt": "Mise à disposition chauffeur", "tag": "Mise à dispo" },
+          { "alt": "Confort & discrétion", "tag": "Confort" }
+        ]
+      }
+    ]
+  }
+}

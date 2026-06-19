@@ -9,6 +9,8 @@
  * - PUT avec valeur contenant la sous-chaîne SMTP_PASS dans une valeur string mais clés OK → accepté (filtre sur les noms de clés uniquement).
  */
 
+import { collectEncodingCorruptionPaths } from "../utils/tenantSettingsEncoding";
+
 /** Taille max du JSON sérialisé (UTF-8), sous la limite globale express.json (1 Mo). */
 export const TENANT_SETTINGS_MAX_SERIALIZED_BYTES = 512 * 1024;
 
@@ -85,6 +87,16 @@ export function validateTenantSettingsPayload(input: unknown): TenantSettingsVal
       ok: false,
       message: "Des clés interdites ont été détectées dans « settings ».",
       details: { forbiddenPaths },
+    };
+  }
+
+  const corruptionPaths = collectEncodingCorruptionPaths(input);
+  if (corruptionPaths.length > 0) {
+    return {
+      ok: false,
+      message:
+        "Encodage UTF-8 invalide détecté dans le contenu texte (accents remplacés par « ? »). Rechargez la page admin et réenregistrez sans client externe.",
+      details: { corruptionPaths: corruptionPaths.slice(0, 20), total: corruptionPaths.length },
     };
   }
 

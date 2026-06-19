@@ -1,0 +1,988 @@
+{
+  "general": {
+    "commercialName": "Exemple VTC",
+    "legalName": "SAS Exemple VTC",
+    "tagline": "Chauffeur privé & transferts",
+    "regionLabel": "France",
+    "serviceAreas": {
+      "headline": "Votre région et au-delà",
+      "cities": [
+        "Ville exemple 1",
+        "Ville exemple 2",
+        "Ville exemple 3",
+        "Aéroports nationaux"
+      ],
+      "description": "Intervention sur la métropole et trajets longue distance sur demande. Transferts aéroport et courses professionnelles."
+    }
+  },
+  "home": {
+    "hero": {
+      "backgroundImageSrc": "/images/hero2.png",
+      "imageAlt": "Véhicule VTC premium",
+      "badgeText": "Disponible 7j / 7",
+      "titleLine1": "Chauffeur privé",
+      "titleHighlight": "Transferts & trajets",
+      "subtitle": "Transferts aéroport, courses longue distance et mise à disposition.",
+      "bullets": "Prise en charge à domicile · Tarif transparent · Service professionnel",
+      "ctas": [
+        {
+          "id": "calculator",
+          "label": "Calculateur de prix",
+          "href": "/calculateur",
+          "enabled": true
+        },
+        {
+          "id": "quote",
+          "label": "Devis personnalisé",
+          "href": "/devis",
+          "enabled": true
+        }
+      ]
+    },
+    "aboutPreview": {
+      "sectionTitle": "Votre chauffeur privé",
+      "driverDisplayName": "Votre équipe VTC",
+      "roleLabel": "Chauffeur privé professionnel",
+      "vehicleLabel": "Véhicule premium · jusqu’à 4 passagers",
+      "leadParagraph": "Nous assurons des transferts fiables, un véhicule haut de gamme et une disponibilité adaptée aux professionnels comme aux particuliers.",
+      "secondaryParagraph": "Réservez en ligne, obtenez un tarif indicatif immédiat et recevez une confirmation par e-mail.",
+      "portraitSrc": "/images/portrait.jpg",
+      "portraitAlt": "Portrait équipe VTC",
+      "ctaDriverName": "notre équipe"
+    },
+    "commitments": {
+      "eyebrow": "Nos engagements",
+      "titlePrefix": "Pourquoi choisir",
+      "titleBrand": "Exemple VTC",
+      "subtitle": "Un service premium, du départ à l'arrivée.",
+      "ctaLabel": "Réserver maintenant",
+      "ctaHref": "/calculateur",
+      "items": [
+        {
+          "id": "commit_01",
+          "num": "01",
+          "title": "Transfert Aéroport",
+          "description": "Orly, CDG, Beauvais, Caen — suivi de vol inclus, aucun retard ignoré.",
+          "iconKey": "plane",
+          "enabled": true
+        },
+        {
+          "id": "commit_02",
+          "num": "02",
+          "title": "Tarif Fixe Garanti",
+          "description": "Zéro supplément bagage, heure de pointe ou détour. Le prix annoncé est le prix payé.",
+          "iconKey": "shield_check",
+          "enabled": true
+        },
+        {
+          "id": "commit_03",
+          "num": "03",
+          "title": "Votre région et au-delà",
+          "description": "Ville exemple 1, Ville exemple 2, Ville exemple 3, Aéroports nationaux",
+          "iconKey": "home",
+          "enabled": true
+        },
+        {
+          "id": "commit_04",
+          "num": "04",
+          "title": "7j / 7 · 24h / 24",
+          "description": "Disponible pour vos vols matinaux et retours tardifs. Nous adaptons nos créneaux à votre programme.",
+          "iconKey": "clock",
+          "enabled": true
+        }
+      ]
+    },
+    "featuredVehicle": {
+      "id": "vehicle_1",
+      "name": "Renault Espace 5 Initiale Paris",
+      "headline": "4 passagers max · Confort grand luxe",
+      "passengerMax": 4,
+      "paymentChips": [
+        "CB",
+        "Virement",
+        "Espèces",
+        "Chèque"
+      ],
+      "gallery": [
+        {
+          "src": "/images/s2/s2-1.jpg",
+          "alt": "Renault Espace 5 – Service VTC",
+          "tag": "Votre véhicule"
+        },
+        {
+          "src": "/images/s1/s1-1.png",
+          "alt": "Transfert aéroport premium",
+          "tag": "Aéroport"
+        },
+        {
+          "src": "/images/s2/s2-3.webp",
+          "alt": "Trajet longue distance",
+          "tag": "Longue distance"
+        },
+        {
+          "src": "/images/s1/s1-4.png",
+          "alt": "Service VTC clé en main",
+          "tag": "Premium"
+        },
+        {
+          "src": "/images/s2/s2-5.webp",
+          "alt": "Mise à disposition chauffeur",
+          "tag": "Mise à dispo"
+        },
+        {
+          "src": "/images/s1/s1-6.png",
+          "alt": "Confort & discrétion",
+          "tag": "Confort"
+        }
+      ]
+    },
+    "video": {
+      "enabled": true,
+      "eyebrow": "En vidéo",
+      "titlePrefix": "Découvrez",
+      "titleBrand": "Exemple VTC",
+      "description": "Un service de prestige, un chauffeur professionnel, un véhicule d'exception.",
+      "posterSrc": "/images/s2/s2-8.webp",
+      "videoSrc": "/video/promo.mkv",
+      "markers": [
+        {
+          "id": "vid_m1",
+          "label": "Service premium",
+          "sub": "Confort & discrétion",
+          "iconKey": "shield_check",
+          "enabled": true
+        },
+        {
+          "id": "vid_m2",
+          "label": "Normandie & Île-de-France",
+          "sub": "Toute la région",
+          "iconKey": "home",
+          "enabled": true
+        },
+        {
+          "id": "vid_m3",
+          "label": "4 aéroports desservis",
+          "sub": "Orly · CDG · Beauvais · Caen",
+          "iconKey": "plane",
+          "enabled": true
+        }
+      ]
+    },
+    "paymentMethods": {
+      "enabled": true,
+      "eyebrow": "Paiement",
+      "title": "Moyens acceptés",
+      "subtitle": "À bord ou au moment de la réservation",
+      "items": [
+        {
+          "id": "card",
+          "label": "Carte bancaire",
+          "sub": "CB · Visa · Mastercard",
+          "iconKey": "credit_card",
+          "enabled": true
+        },
+        {
+          "id": "transfer",
+          "label": "Virement",
+          "sub": "Bancaire · IBAN",
+          "iconKey": "bank",
+          "enabled": true
+        },
+        {
+          "id": "cash",
+          "label": "Espèces",
+          "sub": "À bord · À domicile",
+          "iconKey": "cash",
+          "enabled": true
+        },
+        {
+          "id": "cheque",
+          "label": "Chèque",
+          "sub": "Accepté",
+          "iconKey": "document",
+          "enabled": true
+        }
+      ]
+    },
+    "ctaFinal": {
+      "enabled": true,
+      "backgroundImageSrc": "/images/s2/s2-7.webp",
+      "eyebrow": "Prêt à voyager ?",
+      "title": "Un professionnel sérieux,",
+      "titleHighlight": "ponctuel et courtois",
+      "subtitle": "Devis en quelques minutes. Prise en charge à domicile, tarif fixe, aucune surprise.",
+      "phoneLabel": "Réservation directe",
+      "ctas": [
+        {
+          "id": "cta_calc",
+          "label": "Calculer mon tarif",
+          "href": "/calculateur",
+          "enabled": true
+        },
+        {
+          "id": "cta_quote",
+          "label": "Devis gratuit",
+          "href": "/devis",
+          "enabled": true
+        }
+      ],
+      "guarantees": [
+        {
+          "id": "g1",
+          "badgeId": "fixed_price",
+          "enabled": true
+        },
+        {
+          "id": "g2",
+          "badgeId": "home_pickup",
+          "enabled": true
+        },
+        {
+          "id": "g3",
+          "badgeId": "luggage_included",
+          "enabled": true
+        },
+        {
+          "id": "g4",
+          "badgeId": "flight_tracking",
+          "enabled": true
+        },
+        {
+          "id": "g5",
+          "badgeId": "punctuality",
+          "enabled": true
+        },
+        {
+          "id": "g6",
+          "badgeId": "professional_driver",
+          "enabled": true
+        }
+      ]
+    }
+  },
+  "faq": {
+    "enabled": true,
+    "pageHero": {
+      "eyebrow": "FAQ",
+      "title": "Vos questions,",
+      "titleHighlight": "nos réponses",
+      "introTemplate": "Tout ce que vous devez savoir avant de réserver avec {brand}."
+    },
+    "items": [
+      {
+        "id": "f1",
+        "question": "Les bagages sont-ils inclus dans le prix ?",
+        "answer": "Oui, aucun supplément bagage. Le prix annoncé lors de la réservation est le prix payé.",
+        "iconKey": "luggage_check",
+        "enabled": true
+      },
+      {
+        "id": "f2",
+        "question": "Que se passe-t-il en cas de retard de mon vol ?",
+        "answer": "Nous suivons les horaires de vol lorsque vous nous les communiquez et adaptons la prise en charge en cas de retard, selon disponibilité et sans surprise sur le principe tarifaire convenu.",
+        "iconKey": "plane",
+        "enabled": true
+      },
+      {
+        "id": "f3",
+        "question": "Quels moyens de paiement acceptez-vous ?",
+        "answer": "Carte bancaire, virement, espèces ou chèque. Le paiement peut s'effectuer au moment de la prise en charge ou en ligne.",
+        "iconKey": "credit_card",
+        "enabled": true
+      },
+      {
+        "id": "f4",
+        "question": "Puis-je annuler ma réservation ?",
+        "answer": "Contactez-nous au plus tôt. Les conditions d’annulation dépendent du délai par rapport à la course — nous vous confirmons la règle applicable.",
+        "iconKey": "refresh",
+        "enabled": true
+      },
+      {
+        "id": "f5",
+        "question": "Quelle est votre zone d'intervention ?",
+        "answer": "Ville exemple 1, Ville exemple 2, Ville exemple 3, Aéroports nationaux. Intervention sur la métropole et trajets longue distance sur demande. Transferts aéroport et courses professionnelles.",
+        "iconKey": "home",
+        "enabled": true
+      },
+      {
+        "id": "f6",
+        "question": "Combien de passagers pouvez-vous transporter ?",
+        "answer": "Jusqu’à 4 passagers selon véhicule (Véhicule premium · jusqu’à 4 passagers).",
+        "iconKey": "users",
+        "enabled": true
+      },
+      {
+        "id": "f7",
+        "question": "Proposez-vous des services pour les entreprises ?",
+        "answer": "Oui, Exemple VTC accompagne les entreprises pour des déplacements ponctuels ou récurrents. Devis sur demande.",
+        "iconKey": "building",
+        "enabled": true
+      }
+    ],
+    "cta": {
+      "missingAnswerText": "Vous n'avez pas trouvé votre réponse ?",
+      "primaryLabel": "Nous contacter",
+      "primaryHref": "/contact",
+      "secondaryLabel": "Demander un devis",
+      "secondaryHref": "/devis"
+    }
+  },
+  "services": {
+    "pageHero": {
+      "imageSrc": "/images/car-airport-back.png",
+      "imageAlt": "Services VTC Normandie",
+      "eyebrow": "Nos services",
+      "title": "Un service",
+      "titleHighlight": "sur mesure",
+      "intro": "Transferts aéroport, mise à disposition événementielle, trajets locaux. Confort premium à chaque course."
+    },
+    "items": [
+      {
+        "id": "s1",
+        "num": "01",
+        "title": "Transferts Aéroports",
+        "description": "Liaisons directes vers Orly, Roissy CDG, Beauvais et Caen. Prise en charge à domicile, suivi des vols en temps réel. Aucun supplément en cas de retard.",
+        "href": "/calculateur",
+        "ctaLabel": "Réserver en ligne",
+        "tags": [
+          "Orly",
+          "CDG",
+          "Beauvais",
+          "Caen"
+        ],
+        "iconKey": "plane",
+        "enabled": true
+      },
+      {
+        "id": "s2",
+        "num": "02",
+        "title": "Mise à Disposition",
+        "description": "Votre chauffeur privé à l'heure pour vos événements : mariages, séminaires, déplacements professionnels, soirées. Service sur mesure et discret.",
+        "href": "/devis",
+        "ctaLabel": "Demander un devis",
+        "tags": [
+          "Mariage",
+          "Séminaire",
+          "Événement",
+          "À l'heure"
+        ],
+        "iconKey": "sparkle",
+        "enabled": true
+      },
+      {
+        "id": "s3",
+        "num": "03",
+        "title": "Chauffeur Privé",
+        "description": "Trajets locaux et longue distance. Véhicule premium · jusqu’à 4 passagers — flexibilité et tarifs annoncés clairement.",
+        "href": "/devis",
+        "ctaLabel": "Devis gratuit",
+        "tags": [
+          "Ville exemple 1",
+          "Ville exemple 2",
+          "Ville exemple 3",
+          "Aéroports nationaux"
+        ],
+        "iconKey": "car",
+        "enabled": true
+      }
+    ],
+    "comfortBlock": {
+      "eyebrow": "Votre confort",
+      "vehicleName": "Renault Espace 5 Initiale Paris",
+      "bullets": "4 passagers max · Climatisation · Sièges confortables · Bagages inclus",
+      "paymentChips": [
+        "CB",
+        "Virement",
+        "Espèces",
+        "Chèque"
+      ]
+    }
+  },
+  "aboutPage": {
+    "heroImageSrc": "/images/prensation.jpg",
+    "heroImageAlt": "Portrait équipe VTC",
+    "storyLead": "Une équipe dédiée à rendre vos trajets confortables, ponctuels et sans stress.",
+    "storySecondary": "Réservez en ligne, obtenez un tarif indicatif immédiat et recevez une confirmation par e-mail.",
+    "storyClosing": "Prêt à voyager différemment ? Contactez-nous pour une réservation ou un devis personnalisé.",
+    "storyLocation": "Basés sur votre zone d’intervention, nous couvrons les trajets locaux comme les transferts longue distance.",
+    "values": [
+      {
+        "id": "v1",
+        "label": "Ponctualité",
+        "desc": "Respect des horaires et suivi des trajets.",
+        "iconKey": "clock",
+        "enabled": true
+      },
+      {
+        "id": "v2",
+        "label": "Confort premium",
+        "desc": "Véhicule premium · jusqu’à 4 passagers",
+        "iconKey": "sparkle",
+        "enabled": true
+      },
+      {
+        "id": "v3",
+        "label": "Service 7j/7",
+        "desc": "Disponibilité étendue selon planning — nous contacter pour confirmation.",
+        "iconKey": "calendar",
+        "enabled": true
+      },
+      {
+        "id": "v4",
+        "label": "Tarifs transparents",
+        "desc": "Calculateur en ligne et devis sur demande.",
+        "iconKey": "shield_check",
+        "enabled": true
+      }
+    ],
+    "vehicleBlock": {
+      "title": "Véhicule premium · jusqu’à 4 passagers",
+      "helperText": "À personnaliser selon votre flotte réelle.",
+      "paymentChips": [
+        "CB",
+        "Virement",
+        "Espèces",
+        "Chèque"
+      ]
+    },
+    "ctas": [
+      {
+        "id": "about_cta1",
+        "label": "Réserver maintenant",
+        "href": "/calculateur",
+        "enabled": true
+      },
+      {
+        "id": "about_cta2",
+        "label": "Nous contacter",
+        "href": "/contact",
+        "enabled": true
+      }
+    ]
+  },
+  "testimonials": {
+    "enabled": true,
+    "eyebrow": "Témoignages",
+    "title": "Ils nous font",
+    "titleHighlight": "confiance",
+    "ratingLabel": "Avis clients",
+    "ratingValueText": "5,0",
+    "ratingCountLabel": "Avis clients",
+    "reviewsUrl": "https://www.google.com/search?q=VTC",
+    "items": [
+      {
+        "id": "r1",
+        "text": "Service ponctuel, véhicule impeccable et tarif annoncé respecté. Je recommande pour les trajets aéroport.",
+        "author": "Client particulier",
+        "trajet": "Domicile → aéroport",
+        "rating": 5,
+        "date": "Janvier 2026",
+        "enabled": true
+      },
+      {
+        "id": "r2",
+        "text": "Très professionnel pour nos déplacements d’entreprise. Réactivité au top.",
+        "author": "Responsable administratif",
+        "trajet": "Mise à disposition",
+        "rating": 5,
+        "date": "Décembre 2025",
+        "enabled": true
+      },
+      {
+        "id": "r3",
+        "text": "Conducteur courtois, conduite souple, excellent rapport qualité-prix.",
+        "author": "Voyageur",
+        "trajet": "Longue distance",
+        "rating": 5,
+        "date": "Novembre 2025",
+        "enabled": true
+      },
+      {
+        "id": "r4",
+        "text": "Organisation parfaite pour notre événement : plusieurs allers-retours, aucun retard.",
+        "author": "Coordinateur événementiel",
+        "trajet": "Navette événement",
+        "rating": 5,
+        "date": "Octobre 2025",
+        "enabled": true
+      },
+      {
+        "id": "r5",
+        "text": "Première expérience VTC : accueil chaleureux, trajet fluide, je referai appel à ce service.",
+        "author": "Famille L.",
+        "trajet": "Transfert famille",
+        "rating": 5,
+        "date": "Septembre 2025",
+        "enabled": true
+      }
+    ]
+  },
+  "contactPage": {
+    "eyebrow": "Contact",
+    "title": "On reste",
+    "titleHighlight": "en contact",
+    "intro": "Une question ou une demande particulière ? Nous revenons vers vous rapidement.",
+    "formTitle": "Envoyer un message",
+    "directTitle": "Coordonnées directes"
+  },
+  "thanksPage": {
+    "title": "Merci — Votre Demande a Bien Été Envoyée",
+    "description": "Votre demande de réservation VTC a bien été reçue. Nous vous recontactons dans les plus brefs délais.",
+    "heading": "Message envoyé !",
+    "highlight": "Merci pour votre confiance.",
+    "body": "Votre demande a bien été reçue. Je vous recontacterai dans les plus brefs délais pour confirmer votre réservation.",
+    "infoResponseLabel": "Réponse sous",
+    "infoResponseValue": "2h en général",
+    "responseDelayLabel": "2h en général",
+    "infoPhoneLabel": "Téléphone"
+  },
+  "pricingDisplay": {
+    "tarifsPage": {
+      "heroImageSrc": "/images/s2/s2-2.jpg",
+      "heroImageAlt": "Transferts aéroport Normandie",
+      "heroBadge": "Grille tarifaire",
+      "heroTitle": "Tarifs fixes",
+      "heroTitleHighlight": "et transparents",
+      "heroIntro": "Le prix annoncé est le prix payé. Aucun supplément bagage, embouteillage ou heure tardive.",
+      "guarantees": [
+        {
+          "id": "tg1",
+          "badgeId": "fixed_price",
+          "enabled": true
+        },
+        {
+          "id": "tg2",
+          "badgeId": "luggage_included",
+          "enabled": true
+        },
+        {
+          "id": "tg3",
+          "badgeId": "home_pickup",
+          "enabled": true
+        },
+        {
+          "id": "tg4",
+          "badgeId": "flight_tracking",
+          "enabled": true
+        },
+        {
+          "id": "tg5",
+          "badgeId": "availability_24_7",
+          "enabled": true
+        },
+        {
+          "id": "tg6",
+          "badgeId": "punctuality",
+          "enabled": true
+        }
+      ],
+      "transfers": [
+        {
+          "id": "t1",
+          "depart": "Zone centre",
+          "destination": "Orly",
+          "code": "ORY",
+          "prixAller": "260",
+          "prixAR": "480",
+          "duree": "~2h30",
+          "km": "~220 km",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "t2",
+          "depart": "Ville côte",
+          "destination": "Roissy CDG",
+          "code": "CDG",
+          "prixAller": "270",
+          "prixAR": "490",
+          "duree": "~2h45",
+          "km": "~230 km",
+          "featured": true,
+          "enabled": true
+        },
+        {
+          "id": "t3",
+          "depart": "Ville est",
+          "destination": "Roissy CDG",
+          "code": "CDG",
+          "prixAller": "260",
+          "prixAR": "480",
+          "duree": "~2h30",
+          "km": "~210 km",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "t4",
+          "depart": "Site touristique",
+          "destination": "Orly",
+          "code": "ORY",
+          "prixAller": "260",
+          "prixAR": "480",
+          "duree": "~2h20",
+          "km": "~205 km",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "t5",
+          "depart": "Ville exemple 1",
+          "destination": "Caen",
+          "code": "CFR",
+          "prixAller": "165",
+          "prixAR": "330",
+          "duree": "~1h45",
+          "km": "~135 km",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "t6",
+          "depart": "Ville voisine",
+          "destination": "Beauvais",
+          "code": "BVA",
+          "prixAller": "215",
+          "prixAR": "400",
+          "duree": "~2h15",
+          "km": "~185 km",
+          "featured": false,
+          "enabled": true
+        }
+      ],
+      "servicesSpecialEyebrow": "Services spéciaux",
+      "madTitle": "Mise à Disposition",
+      "madSubtitle": "Mariage · Soirée · Séminaire · Événement professionnel",
+      "madVehicleHint": "Véhicule premium · jusqu’à 4 passagers",
+      "madHourlyFrom": 80,
+      "ctaPrimaryLabel": "Calculer mon tarif personnalisé",
+      "ctaSecondaryLabel": "Demander un devis gratuit"
+    },
+    "highlights": {
+      "popularTransfersEnabled": true,
+      "popularTransfers": [
+        {
+          "id": "h1",
+          "depart": "Le Havre",
+          "destination": "Orly",
+          "code": "ORY",
+          "prixAR": "480",
+          "prixAller": "260",
+          "duree": "~2h30",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "h2",
+          "depart": "Fécamp",
+          "destination": "Roissy CDG",
+          "code": "CDG",
+          "prixAR": "490",
+          "prixAller": "270",
+          "duree": "~2h45",
+          "featured": true,
+          "enabled": true
+        },
+        {
+          "id": "h3",
+          "depart": "Bolbec",
+          "destination": "Roissy CDG",
+          "code": "CDG",
+          "prixAR": "480",
+          "prixAller": "260",
+          "duree": "~2h30",
+          "featured": false,
+          "enabled": true
+        },
+        {
+          "id": "h4",
+          "depart": "Étretat",
+          "destination": "Orly",
+          "code": "ORY",
+          "prixAR": "480",
+          "prixAller": "260",
+          "duree": "~2h20",
+          "featured": false,
+          "enabled": true
+        }
+      ],
+      "madEnabled": true,
+      "madHourlyFrom": 80,
+      "madSubtitle": "Mariage · Soirée · Événement"
+    },
+    "codeColors": {
+      "ORY": {
+        "bg": "bg-blue-500/10",
+        "text": "text-blue-300",
+        "dot": "bg-blue-400"
+      },
+      "CDG": {
+        "bg": "bg-violet-500/10",
+        "text": "text-violet-300",
+        "dot": "bg-violet-400"
+      },
+      "BVA": {
+        "bg": "bg-emerald-500/10",
+        "text": "text-emerald-300",
+        "dot": "bg-emerald-400"
+      },
+      "CFR": {
+        "bg": "bg-amber-500/10",
+        "text": "text-amber-300",
+        "dot": "bg-amber-400"
+      }
+    }
+  },
+  "calculatorDisplay": {
+    "vtcBaseAddress": "Paris, France",
+    "serviceTypes": [
+      {
+        "id": "transfert-aeroport",
+        "label": "Transfert Aéroport",
+        "sublabel": "Orly · CDG · Beauvais · Caen",
+        "enabled": true
+      },
+      {
+        "id": "trajet-classique",
+        "label": "Trajet Classique",
+        "sublabel": "Point A → Point B",
+        "enabled": true
+      },
+      {
+        "id": "mad-evenementiel",
+        "label": "Mise à Disposition",
+        "sublabel": "Mariage · Événement · Soirée",
+        "enabled": true
+      }
+    ],
+    "maxPassengers": 4,
+    "maxBaggageIndex": 8,
+    "airports": [
+      {
+        "code": "ORY",
+        "label": "Paris-Orly (ORY)",
+        "address": "Aéroport de Paris-Orly, 94390 Orly, France"
+      },
+      {
+        "code": "CDG",
+        "label": "Paris-Charles de Gaulle (CDG)",
+        "address": "Aéroport de Paris-Charles de Gaulle, 95700 Roissy-en-France, France"
+      },
+      {
+        "code": "BVA",
+        "label": "Beauvais-Tillé (BVA)",
+        "address": "Aéroport de Beauvais-Tillé, 60000 Tillé, France"
+      },
+      {
+        "code": "CC",
+        "label": "Caen-Carpiquet (CC)",
+        "address": "Aéroport de Caen-Carpiquet, 14650 Carpiquet, France"
+      }
+    ],
+    "extrasOptions": [
+      {
+        "id": "siege-auto",
+        "label": "Siège auto / Réhausseur",
+        "enabled": true
+      },
+      {
+        "id": "bebe-bord",
+        "label": "Bébé à bord",
+        "enabled": true
+      },
+      {
+        "id": "fauteuil-roulant",
+        "label": "Fauteuil roulant",
+        "enabled": true
+      },
+      {
+        "id": "acces-difficile",
+        "label": "Accès difficile",
+        "enabled": true
+      }
+    ]
+  },
+  "badges": {
+    "library": [
+      {
+        "id": "vtc_card",
+        "text": "Carte professionnelle VTC",
+        "iconKey": "id_card",
+        "enabled": true
+      },
+      {
+        "id": "payment_onboard",
+        "text": "Paiement accepté à bord",
+        "iconKey": "credit_card",
+        "enabled": true
+      },
+      {
+        "id": "premium_vehicle",
+        "text": "Véhicule premium",
+        "iconKey": "car",
+        "enabled": true
+      },
+      {
+        "id": "flight_tracking",
+        "text": "Suivi de vol en temps réel",
+        "iconKey": "globe",
+        "enabled": true
+      },
+      {
+        "id": "availability_24_7",
+        "text": "Disponible 7j / 7 · 24h / 24",
+        "iconKey": "clock",
+        "enabled": true
+      },
+      {
+        "id": "luggage_included",
+        "text": "Bagages inclus",
+        "iconKey": "luggage_check",
+        "enabled": true
+      },
+      {
+        "id": "fixed_price",
+        "text": "Tarif fixe garanti",
+        "iconKey": "shield_check",
+        "enabled": true
+      },
+      {
+        "id": "home_pickup",
+        "text": "Prise en charge à domicile",
+        "iconKey": "home",
+        "enabled": true
+      },
+      {
+        "id": "punctuality",
+        "text": "Ponctualité garantie",
+        "iconKey": "check",
+        "enabled": true
+      },
+      {
+        "id": "professional_driver",
+        "text": "Chauffeur professionnel",
+        "iconKey": "user_badge",
+        "enabled": true
+      },
+      {
+        "id": "no_surcharge",
+        "text": "Zéro supplément",
+        "iconKey": "ban",
+        "enabled": true
+      }
+    ],
+    "placements": {
+      "home_about_atouts": [
+        {
+          "badgeId": "vtc_card"
+        },
+        {
+          "badgeId": "premium_vehicle"
+        },
+        {
+          "badgeId": "payment_onboard"
+        },
+        {
+          "badgeId": "flight_tracking"
+        },
+        {
+          "badgeId": "availability_24_7"
+        },
+        {
+          "badgeId": "luggage_included",
+          "textOverride": "Bagages inclus · Aucun supplément"
+        }
+      ],
+      "home_cta_guarantees": [
+        {
+          "badgeId": "fixed_price"
+        },
+        {
+          "badgeId": "home_pickup"
+        },
+        {
+          "badgeId": "luggage_included"
+        },
+        {
+          "badgeId": "flight_tracking"
+        },
+        {
+          "badgeId": "punctuality"
+        },
+        {
+          "badgeId": "professional_driver"
+        }
+      ],
+      "pricing_page_guarantees": [
+        {
+          "badgeId": "fixed_price",
+          "textOverride": "Prix fixe TTC"
+        },
+        {
+          "badgeId": "luggage_included",
+          "textOverride": "Bagages inclus"
+        },
+        {
+          "badgeId": "home_pickup",
+          "textOverride": "Prise en charge domicile"
+        },
+        {
+          "badgeId": "flight_tracking",
+          "textOverride": "Suivi de vol"
+        },
+        {
+          "badgeId": "availability_24_7",
+          "textOverride": "7j/7 · 24h/24"
+        },
+        {
+          "badgeId": "no_surcharge",
+          "textOverride": "Zéro supplément"
+        }
+      ],
+      "calculator_hero_guarantees": [
+        {
+          "badgeId": "fixed_price"
+        },
+        {
+          "badgeId": "luggage_included"
+        },
+        {
+          "badgeId": "home_pickup"
+        },
+        {
+          "badgeId": "flight_tracking"
+        }
+      ]
+    }
+  },
+  "seo": {
+    "defaultTitle": "Chauffeur privé VTC — Exemple VTC",
+    "titleTemplate": "%s | Exemple VTC",
+    "defaultDescription": "Exemple VTC : transferts aéroport, trajets sur mesure et mise à disposition. Réservation en ligne, tarifs transparents, service professionnel en France.",
+    "keywords": [
+      "VTC",
+      "chauffeur privé",
+      "transfert aéroport",
+      "navette aéroport",
+      "mise à disposition",
+      "réservation VTC",
+      "Exemple VTC",
+      "course VTC",
+      "transport avec chauffeur"
+    ],
+    "openGraphLocale": "fr_FR",
+    "category": "Transport"
+  },
+  "legal": {
+    "displayName": "Exemple VTC",
+    "legalRepresentative": "À compléter",
+    "siret": "000 000 000 00000",
+    "vtcLicenseNumber": "À compléter",
+    "hosting": {
+      "name": "Vercel Inc.",
+      "address": "340 S Lemon Ave #4133, Walnut, CA 91789, USA",
+      "website": "https://vercel.com"
+    },
+    "privacySummary": "Les données collectées via les formulaires servent uniquement à traiter vos demandes de contact, devis et réservation. Durée de conservation et destinataires : à préciser dans votre politique de confidentialité."
+  }
+}
