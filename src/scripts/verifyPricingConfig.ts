@@ -23,7 +23,16 @@ const emptyRetour: Distances["retour"] = {
 };
 
 /** Paramètres alignés sur le rapport d’audit fonctionnel. */
-function buildAuditPricingConfig(): PricingConfigPayload {
+function buildAuditPricingConfig(overrides?: {
+  returnToBaseEnabled?: boolean;
+  approachPricePerKm?: number;
+  outOfZoneMultiplier?: number;
+  oneWayPricePerKm?: number;
+}): PricingConfigPayload {
+  const returnToBaseEnabled = overrides?.returnToBaseEnabled ?? true;
+  const approachPricePerKm = overrides?.approachPricePerKm ?? 2;
+  const outOfZoneMultiplier = overrides?.outOfZoneMultiplier ?? 1;
+  const oneWayPricePerKm = overrides?.oneWayPricePerKm ?? 2;
   return {
     version: "v1",
     currency: "EUR",
@@ -40,7 +49,7 @@ function buildAuditPricingConfig(): PricingConfigPayload {
         {
           id: "zone-1-one-way",
           label: "AS zone 1",
-          pricePerKm: 2,
+          pricePerKm: oneWayPricePerKm,
           minimumPrice: 300,
           enabled: true,
         },
@@ -54,9 +63,13 @@ function buildAuditPricingConfig(): PricingConfigPayload {
           enabled: true,
         },
       ],
-      approach: { enabled: true, mode: "always_approach", pricePerKm: 2 },
-      returnToBase: { enabled: true, mode: "always_return_base", pricePerKm: 2 },
-      outOfPrimaryZone: { enabled: true, mode: "multiplier", value: 1, zoneSetId: "fr-76" },
+      approach: { enabled: true, mode: "always_approach", pricePerKm: approachPricePerKm },
+      returnToBase: {
+        enabled: returnToBaseEnabled,
+        mode: returnToBaseEnabled ? "always_return_base" : "none",
+        pricePerKm: approachPricePerKm,
+      },
+      outOfPrimaryZone: { enabled: true, mode: "multiplier", value: outOfZoneMultiplier, zoneSetId: "fr-76" },
     },
     airportTransfers: {
       enabled: true,
@@ -144,9 +157,10 @@ async function runCase(opts: {
   id: string;
   body: Record<string, unknown>;
   distances: Distances;
+  config?: Parameters<typeof buildAuditPricingConfig>[0];
   assert: (tarif: number) => { ok: boolean; attendu: string; formule: string };
 }): Promise<CaseResult> {
-  const engine = mapPricingConfigToEngine(validatePricingConfigPayload(buildAuditPricingConfig()));
+  const engine = mapPricingConfigToEngine(validatePricingConfigPayload(buildAuditPricingConfig(opts.config)));
   const typeKey = resolveServiceTypeKey(opts.body);
   if (!typeKey) throw new Error(`Type service inconnu: ${opts.id}`);
   const r = await calculerTarif(typeKey, opts.body, opts.distances, engine);
@@ -193,6 +207,36 @@ const distClassicAr: Distances = {
 const distClassicArRemise: Distances = {
   aller: { approche: { km: 25, duree: 1500 }, trajet: { km: 120, duree: 7200 }, retourBase: { km: 25, duree: 1500 } },
   retour: { approche: { km: 25, duree: 1500 }, trajet: { km: 120, duree: 7200 }, retourBase: { km: 25, duree: 1500 } },
+};
+
+/** Distances réalistes Satillieu → Lyon (audit retour dépôt). */
+const distSatillieuLyon: Distances = {
+  aller: {
+    approche: { km: 1.587, duree: 240 },
+    trajet: { km: 92.036, duree: 6000 },
+    retourBase: { km: 91.997, duree: 6000 },
+  },
+  retour: emptyRetour,
+};
+
+/** Trajet long Satillieu → Paris pour tester le multiplicateur hors zone. */
+const distSatillieuParis: Distances = {
+  aller: {
+    approche: { km: 12, duree: 900 },
+    trajet: { km: 420, duree: 16800 },
+    retourBase: { km: 12, duree: 900 },
+  },
+  retour: emptyRetour,
+};
+
+/** Trajet court Satillieu → Annonay (même département 07). */
+const distSatillieuAnnonay: Distances = {
+  aller: {
+    approche: { km: 2, duree: 300 },
+    trajet: { km: 28, duree: 1800 },
+    retourBase: { km: 2, duree: 300 },
+  },
+  retour: emptyRetour,
 };
 
 async function main() {
@@ -381,6 +425,101 @@ async function main() {
       }),
     })
   );
+
+  {
+    const bodyLyon = {
+      vtcBaseAddress: VTC_BASE,
+      general: { TypeService: "Trajet Classique" },
+      trajetClassique: {
+        TCtrajet: "Aller Simple",
+        TCallerpriseencharge: SATILLIEU,
+        TCallerDestination: "69001 Lyon, France",
+        TCallerdate: dateAudit,
+        TCallerheure: heureAudit,
+      },
+    };
+    const engineOn = mapPricingConfigToEngine(
+      validatePricingConfigPayload(buildAuditPricingConfig({ approachPricePerKm: 2, returnToBaseEnabled: true }))
+    );
+    const engineOff = mapPricingConfigToEngine(
+      validatePricingConfigPayload(buildAuditPricingConfig({ approachPricePerKm: 2, returnToBaseEnabled: false }))
+    );
+    const rOn = await calculerTarif("classique", bodyLyon, distSatillieuLyon, engineOn);
+    const rOff = await calculerTarif("classique", bodyLyon, distSatillieuLyon, engineOff);
+    results.push({
+      id: "Retour dépôt ON (Satillieu→Lyon)",
+      tarif: rOn.tarif,
+      attendu: "> prix retour dépôt OFF",
+      formule: "approche + trajet + retourBase facturé",
+      ok: rOn.tarif > rOff.tarif,
+    });
+    results.push({
+      id: "Retour dépôt OFF (Satillieu→Lyon)",
+      tarif: rOff.tarif,
+      attendu: "< prix retour dépôt ON",
+      formule: "retourBase non facturé",
+      ok: rOff.tarif < rOn.tarif,
+    });
+  }
+
+  {
+    const bodyParis = {
+      vtcBaseAddress: VTC_BASE,
+      general: { TypeService: "Trajet Classique" },
+      trajetClassique: {
+        TCtrajet: "Aller Simple",
+        TCallerpriseencharge: SATILLIEU,
+        TCallerDestination: "75001 Paris, France",
+        TCallerdate: dateAudit,
+        TCallerheure: heureAudit,
+      },
+    };
+    const bodyAnnonay = {
+      vtcBaseAddress: VTC_BASE,
+      general: { TypeService: "Trajet Classique" },
+      trajetClassique: {
+        TCtrajet: "Aller Simple",
+        TCallerpriseencharge: SATILLIEU,
+        TCallerDestination: "07100 Annonay, France",
+        TCallerdate: dateAudit,
+        TCallerheure: heureAudit,
+      },
+    };
+    const engineX1 = mapPricingConfigToEngine(
+      validatePricingConfigPayload(
+        buildAuditPricingConfig({ approachPricePerKm: 0, returnToBaseEnabled: false, outOfZoneMultiplier: 1 })
+      )
+    );
+    const engineX15 = mapPricingConfigToEngine(
+      validatePricingConfigPayload(
+        buildAuditPricingConfig({ approachPricePerKm: 0, returnToBaseEnabled: false, outOfZoneMultiplier: 1.5 })
+      )
+    );
+    const parisX1 = await calculerTarif("classique", bodyParis, distSatillieuParis, engineX1);
+    const parisX15 = await calculerTarif("classique", bodyParis, distSatillieuParis, engineX15);
+    const annonayX15 = await calculerTarif("classique", bodyAnnonay, distSatillieuAnnonay, engineX15);
+    results.push({
+      id: "Hors zone Paris ×1",
+      tarif: parisX1.tarif,
+      attendu: "< Paris ×1.5",
+      formule: "destination hors zone d'exploitation",
+      ok: parisX1.tarif < parisX15.tarif,
+    });
+    results.push({
+      id: "Hors zone Paris ×1.5",
+      tarif: parisX15.tarif,
+      attendu: "> Paris ×1",
+      formule: "×1.5 appliqué (destination Paris)",
+      ok: parisX15.tarif > parisX1.tarif,
+    });
+    results.push({
+      id: "Hors zone Annonay ×1.5 (local)",
+      tarif: annonayX15.tarif,
+      attendu: "300 € (pas de majoration abusive)",
+      formule: "même département 07 → pas de ×1.5",
+      ok: annonayX15.tarif === 300,
+    });
+  }
 
   {
     const engine = mapPricingConfigToEngine(validatePricingConfigPayload(buildAuditPricingConfig()));

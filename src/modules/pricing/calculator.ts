@@ -39,16 +39,56 @@ function normalizeString(str: string): string {
     .trim();
 }
 
+function communeMatchesAddress(normalizedAddress: string, communeSlug: string): boolean {
+  const commune = communeSlug.replace(/-/g, " ").trim();
+  if (!commune) return false;
+  const padded = ` ${normalizedAddress} `;
+  return padded.includes(` ${commune} `);
+}
+
+function extractFrenchDepartmentCode(address: string): string | null {
+  const normalized = normalizeString(address);
+  const match = normalized.match(/\b(\d{5})\b/);
+  if (!match) return null;
+  return match[1].slice(0, 2);
+}
+
 export function isInPrimaryServiceZone(
-  adresseDepart: string,
+  adresse: string,
   engine: TenantPricingEngineConfig
 ): boolean {
   const set = getPrimaryServiceZoneCommunes(engine.primaryServiceZoneSetId) ?? new Set<string>();
-  const adresseNormalisee = normalizeString(adresseDepart);
+  const adresseNormalisee = normalizeString(adresse);
   for (const commune of Array.from(set)) {
-    if (adresseNormalisee.includes(commune)) return true;
+    if (communeMatchesAddress(adresseNormalisee, commune)) return true;
   }
   return false;
+}
+
+/** Zone primaire configurée ou même département que la base VTC (ex. 07 pour Satillieu). */
+export function isInOperatorServiceArea(
+  adresse: string,
+  engine: TenantPricingEngineConfig
+): boolean {
+  const formatted = getFormattedAddress(adresse);
+  if (isInPrimaryServiceZone(formatted, engine)) return true;
+  const depotDept = extractFrenchDepartmentCode(engine.depotAddress);
+  const addrDept = extractFrenchDepartmentCode(formatted);
+  if (depotDept && addrDept && depotDept === addrDept) return true;
+  return false;
+}
+
+/** Majoration hors zone si le départ ou la destination sort de la zone d'exploitation. */
+export function shouldApplyOutOfZoneMultiplier(
+  adresseDepart: string,
+  adresseDestination: string,
+  engine: TenantPricingEngineConfig
+): boolean {
+  const mult = engine.outOfPrimaryServiceZoneMultiplier;
+  if (!Number.isFinite(mult) || mult === 1) return false;
+  const dep = getFormattedAddress(adresseDepart);
+  const dest = getFormattedAddress(adresseDestination);
+  return !isInOperatorServiceArea(dep, engine) || !isInOperatorServiceArea(dest, engine);
 }
 
 function zoneFromDistance(d: number): number {
@@ -349,12 +389,13 @@ export async function calculerTarif(
 
     const approcheKm = distances.aller.approche.km ?? 0;
     const retourBaseKm = distances.aller.retourBase.km ?? 0;
+    const retourBaseCoef = engine.returnToBaseEnabled !== false ? apCoef : 0;
 
     const supplementTrajet = trajetKm >= 1 && trajetKm <= 50 ? 0.2 : 0.1;
     (tarifs.aller as Record<string, number>).approche = approcheKm * apCoef;
     (tarifs.aller as Record<string, number>).trajet =
       trajetKm * (tKmAller + supplementTrajet);
-    (tarifs.aller as Record<string, number>).retourBase = retourBaseKm * apCoef;
+    (tarifs.aller as Record<string, number>).retourBase = retourBaseKm * retourBaseCoef;
     (tarifs.aller as Record<string, number>).total =
       fmt((tarifs.aller as Record<string, number>).approche) +
       fmt((tarifs.aller as Record<string, number>).trajet) +
@@ -367,12 +408,13 @@ export async function calculerTarif(
       const approcheRetourKm = distances.retour.approche.km ?? 0;
       const retourBaseRetourKm = distances.retour.retourBase.km ?? 0;
       const apCoefAr = engine.tcTable.AR.APPROCHE;
+      const retourBaseCoefAr = engine.returnToBaseEnabled !== false ? apCoefAr : 0;
 
       (tarifs.retour as Record<string, number>).approche = approcheRetourKm * apCoefAr;
       const supplementRetour = trajetRetourKm >= 1 && trajetRetourKm <= 50 ? 0.2 : 0.1;
       (tarifs.retour as Record<string, number>).trajet =
         trajetRetourKm * (tKmRetour + supplementRetour);
-      (tarifs.retour as Record<string, number>).retourBase = retourBaseRetourKm * apCoefAr;
+      (tarifs.retour as Record<string, number>).retourBase = retourBaseRetourKm * retourBaseCoefAr;
       (tarifs.retour as Record<string, number>).total =
         fmt((tarifs.retour as Record<string, number>).approche) +
         fmt((tarifs.retour as Record<string, number>).trajet) +
@@ -431,7 +473,12 @@ export async function calculerTarif(
     const adresseDepart = getFormattedAddress(
       t?.TCallerpriseencharge || (payload?.AdresseDepart_1 as string) || ""
     );
-    if (!isInPrimaryServiceZone(adresseDepart, engine)) total *= engine.outOfPrimaryServiceZoneMultiplier;
+    const adresseDestination = getFormattedAddress(
+      t?.TCallerDestination || (payload?.AdresseArrivee_1 as string) || ""
+    );
+    if (shouldApplyOutOfZoneMultiplier(adresseDepart, adresseDestination, engine)) {
+      total *= engine.outOfPrimaryServiceZoneMultiplier;
+    }
 
     const zones = isAR ? engine.tcTable.AR.ZONES : engine.tcTable.SIMPLE.ZONES;
     const zoneConfig = zones[zone as keyof typeof zones];

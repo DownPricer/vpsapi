@@ -204,6 +204,9 @@ export function mapPricingConfigToEngine(payload: PricingConfigPayload): TenantP
         ? Math.min(100, Math.max(0, roundTripDiscount.value))
         : 0,
     outOfPrimaryServiceZoneMultiplier: outPrimaryResolved.multiplier,
+    returnToBaseEnabled:
+      payload.classicTrip.returnToBase.enabled &&
+      payload.classicTrip.returnToBase.mode !== "none",
     primaryServiceZoneSetId: outPrimaryResolved.zoneSetId,
     madHourlyRates: buildMadHourlyRates(payload),
     madEventMinimumTotal: payload.hourlyHire.minimumTotal ?? 0,

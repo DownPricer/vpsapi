@@ -209,10 +209,12 @@ export function buildPricingDebugBreakdown(input: {
 
   const rulesApplied: string[] = [
     `Moteur : timezone=${engine.timezone}`,
-    `Trajet classique : approche (base→prise en charge) + trajet client + retour dépôt (destination→base) sont tous facturés (coeff. APPROCHE sur les deux segments base)`,
+    engine.returnToBaseEnabled === false
+      ? "Trajet classique : retour dépôt désactivé (segment destination→base non facturé)"
+      : "Trajet classique : approche (base→prise en charge) + trajet client + retour dépôt (destination→base) sont tous facturés (coeff. APPROCHE sur les deux segments base)",
     `Trajet classique : grille €/km (zone) basée sur la distance du trajet client (max aller/retour en A/R)`,
-    `Zone service préférentielle : ${engine.primaryServiceZoneSetId}`,
-    `Coeff. hors zone : ×${engine.outOfPrimaryServiceZoneMultiplier}`,
+    `Zone service préférentielle : ${engine.primaryServiceZoneSetId} (+ département base VTC)`,
+    `Coeff. hors zone : ×${engine.outOfPrimaryServiceZoneMultiplier} (si départ ou destination hors zone)`,
     `Remise A/R moteur : ${engine.applyArDiscount && engine.arDiscountPercent > 0 ? `oui (-${engine.arDiscountPercent} % trajet classique A/R)` : "non"}`,
     `Minimum MAD (config) : ${engine.madEventMinimumTotal} €`,
   ];

@@ -6,6 +6,8 @@ export {
   calculerTarif,
   buildGcalUrl,
   isInPrimaryServiceZone,
+  isInOperatorServiceArea,
+  shouldApplyOutOfZoneMultiplier,
   resolveVtcBaseAddress,
 } from "./calculator";
 export { serializeTarifResult } from "./serialize";

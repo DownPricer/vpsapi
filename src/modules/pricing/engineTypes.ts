@@ -55,6 +55,8 @@ export interface TenantPricingEngineConfig {
   /** Pourcentage de remise aller-retour (ex. 5 → total × 0,95). 0 si désactivée. */
   arDiscountPercent: number;
   outOfPrimaryServiceZoneMultiplier: number;
+  /** Facturer le segment destination → base (retour dépôt) sur les trajets classiques. */
+  returnToBaseEnabled: boolean;
   /**
    * Identifiant de jeu de communes (slugs normalisés) pour la zone « préférentielle ».
    * Ex. `fr-76` — résolu via `zoneSets/registry`.

@@ -210,8 +210,8 @@ export function mapEngineToPricingConfig(
         pricePerKm: engine.tcTable.SIMPLE.APPROCHE,
       },
       returnToBase: {
-        enabled: true,
-        mode: "always_return_base",
+        enabled: engine.returnToBaseEnabled !== false,
+        mode: engine.returnToBaseEnabled === false ? "none" : "always_return_base",
         // L'algo facture retour base au même €/km que l'approche.
         pricePerKm: engine.tcTable.SIMPLE.APPROCHE,
       },

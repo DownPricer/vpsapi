@@ -53,6 +53,7 @@ export const tenantPricingEngineJsonSchema = z.object({
   applyArDiscount: z.boolean(),
   arDiscountPercent: z.number().min(0).max(100).optional(),
   outOfPrimaryServiceZoneMultiplier: z.number(),
+  returnToBaseEnabled: z.boolean().optional(),
   primaryServiceZoneSetId: z.string().min(1),
   madHourlyRates: z.object({
     default: z.number(),
@@ -71,5 +72,9 @@ export function parsePricingEngineJson(raw: unknown): TenantPricingEngineConfig 
       : parsed.applyArDiscount
         ? 5
         : 0;
-  return { ...parsed, arDiscountPercent } as TenantPricingEngineConfig;
+  return {
+    ...parsed,
+    arDiscountPercent,
+    returnToBaseEnabled: parsed.returnToBaseEnabled ?? true,
+  } as TenantPricingEngineConfig;
 }
