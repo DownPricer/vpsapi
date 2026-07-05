@@ -1,6 +1,7 @@
 node_modules/
 dist/
 email-verify-output/
+tmp/
 .env
 *.log
 .DS_Store

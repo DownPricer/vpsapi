@@ -13,6 +13,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "seed": "tsx prisma/seed.ts",
     "verify:emails": "tsx scripts/verify-lead-emails.ts",
+    "test:emails": "tsx src/scripts/sendAllTestEmails.ts",
     "verify:pricing-config-mapping": "tsx src/scripts/verifyPricingConfigMapping.ts",
     "verify:pricing-config-roundtrip": "tsx src/scripts/verifyPricingConfigRoundtrip.ts",
     "verify:classic-base-segments": "tsx src/scripts/verifyClassicBaseSegments.ts",
