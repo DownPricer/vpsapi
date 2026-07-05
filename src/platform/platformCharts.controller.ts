@@ -121,6 +121,10 @@ export async function getPlatformOverviewCharts(req: Request, res: Response, nex
       const rev = revByDay.get(d) ?? { amount: 0, fee: 0 };
       return {
         day: d,
+        pageViews: m?.get("page_view") ?? 0,
+        calculatorOpened: m?.get("calculator_opened") ?? 0,
+        calculatorStarted: m?.get("calculator_started") ?? 0,
+        calculatorQuoteDisplayed: m?.get("calculator_quote_displayed") ?? 0,
         calculatorQuotes: (m?.get("calculator_quote_success") ?? 0) + (m?.get("calculator_quote_failed") ?? 0),
         reservations: resByDay.get(d) ?? (m?.get("booking_created") ?? 0),
         payments: (m?.get("payment_succeeded") ?? 0) + (m?.get("payment_failed") ?? 0),
@@ -207,6 +211,10 @@ export async function getPlatformSiteCharts(req: Request, res: Response, next: N
       const rev = revByDay.get(d) ?? { amount: 0, fee: 0 };
       return {
         day: d,
+        pageViews: m?.get("page_view") ?? 0,
+        calculatorOpened: m?.get("calculator_opened") ?? 0,
+        calculatorStarted: m?.get("calculator_started") ?? 0,
+        calculatorQuoteDisplayed: m?.get("calculator_quote_displayed") ?? 0,
         calculatorQuotes: (m?.get("calculator_quote_success") ?? 0) + (m?.get("calculator_quote_failed") ?? 0),
         demands: (m?.get("quote_request_created") ?? 0) + (m?.get("booking_created") ?? 0),
         reservations: resByDay.get(d) ?? (m?.get("booking_created") ?? 0),
@@ -221,9 +229,10 @@ export async function getPlatformSiteCharts(req: Request, res: Response, next: N
     // Funnel simple (range) : page_view (si dispo) -> quotes -> demandes -> réservations -> paiements
     const funnel = {
       pageViews: eventRows.filter((r) => r.type === "page_view").reduce((a, r) => a + r.cnt, 0),
-      quotes: eventRows
-        .filter((r) => r.type === "calculator_quote_success" || r.type === "calculator_quote_failed")
-        .reduce((a, r) => a + r.cnt, 0),
+      calculatorOpened: eventRows.filter((r) => r.type === "calculator_opened").reduce((a, r) => a + r.cnt, 0),
+      calculatorStarted: eventRows.filter((r) => r.type === "calculator_started").reduce((a, r) => a + r.cnt, 0),
+      quoteDisplayed: eventRows.filter((r) => r.type === "calculator_quote_displayed").reduce((a, r) => a + r.cnt, 0),
+      quotesApi: eventRows.filter((r) => r.type === "calculator_quote_success" || r.type === "calculator_quote_failed").reduce((a, r) => a + r.cnt, 0),
       demands: eventRows
         .filter((r) => r.type === "quote_request_created" || r.type === "booking_created")
         .reduce((a, r) => a + r.cnt, 0),

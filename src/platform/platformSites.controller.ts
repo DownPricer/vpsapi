@@ -3,6 +3,7 @@ import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { auditTenantContent } from "./auditTenantContent";
 import { computeSitePlan } from "./sitePlan";
+import { resolveTenantUrls } from "./resolveTenantUrls";
 
 function safeString(v: unknown, max = 200): string | null {
   if (typeof v !== "string") return null;
@@ -23,14 +24,17 @@ function pickSettingsIdentity(settings: unknown): {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return {};
   const s = settings as Record<string, unknown>;
   const branding = (s.branding && typeof s.branding === "object" && !Array.isArray(s.branding)) ? (s.branding as Record<string, unknown>) : null;
-  const company = (s.company && typeof s.company === "object" && !Array.isArray(s.company)) ? (s.company as Record<string, unknown>) : null;
+  const general = (s.general && typeof s.general === "object" && !Array.isArray(s.general)) ? (s.general as Record<string, unknown>) : null;
   const contact = (s.contact && typeof s.contact === "object" && !Array.isArray(s.contact)) ? (s.contact as Record<string, unknown>) : null;
 
-  const commercialName = safeString(branding?.name) ?? safeString(company?.name) ?? null;
-  const companyName = safeString(company?.legalName) ?? safeString(company?.name) ?? null;
-  const email = safeString(contact?.email) ?? safeString(company?.email) ?? null;
-  const phone = safeString(contact?.phone) ?? safeString(company?.phone) ?? null;
-  const city = safeString(company?.city) ?? null;
+  const commercialName = safeString(general?.commercialName) ?? safeString(branding?.name) ?? null;
+  const companyName = safeString(general?.legalName) ?? null;
+  const email = safeString(contact?.emailPublic) ?? safeString(contact?.email) ?? null;
+  const phone = safeString(contact?.phoneDisplay) ?? safeString(contact?.phoneE164) ?? null;
+  const city = (() => {
+    const addr = contact?.address as any;
+    return safeString(addr?.city) ?? null;
+  })();
   const siteUrl = safeString(branding?.siteUrl) ?? null;
   const adminUrl = safeString(branding?.adminUrl) ?? null;
   return { commercialName, companyName, email, phone, city, siteUrl, adminUrl };
@@ -173,6 +177,11 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
     const rows = tenants
       .map((t) => {
         const ident = pickSettingsIdentity(t.settings);
+        const resolved = resolveTenantUrls({
+          tenantId: t.id,
+          settings: t.settings ?? null,
+          apiBaseUrl: "https://api.sitereadyshd.fr",
+        });
         const audit = auditTenantContent(t.settings);
         const stripeConnected = Boolean(t.stripeAccountId);
         const stripeOk = stripeConnected && t.stripeChargesEnabled && t.stripeDetailsSubmitted;
@@ -229,8 +238,11 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
           active: t.active,
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
-          siteUrl: ident.siteUrl ?? null,
-          adminUrl: ident.adminUrl ?? null,
+          siteUrl: resolved.publicUrl ?? ident.siteUrl ?? null,
+          adminUrl: resolved.adminProUrl ?? ident.adminUrl ?? null,
+          calculatorUrl: resolved.calculatorUrl,
+          apiUrl: resolved.apiUrl,
+          domain: resolved.domain,
           status: {
             // legacy (compat UI V2 précédente)
             global: plan.legacyStatus,
@@ -344,6 +356,11 @@ export async function getPlatformSiteByTenantId(req: Request, res: Response, nex
       return;
     }
     const ident = pickSettingsIdentity(tenant.settings);
+    const resolved = resolveTenantUrls({
+      tenantId: tenant.id,
+      settings: tenant.settings ?? null,
+      apiBaseUrl: "https://api.sitereadyshd.fr",
+    });
     res.status(200).json({
       success: true,
       data: {
@@ -355,8 +372,11 @@ export async function getPlatformSiteByTenantId(req: Request, res: Response, nex
         active: tenant.active,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
-        siteUrl: ident.siteUrl ?? null,
-        adminUrl: ident.adminUrl ?? null,
+        siteUrl: resolved.publicUrl ?? ident.siteUrl ?? null,
+        adminUrl: resolved.adminProUrl ?? ident.adminUrl ?? null,
+        calculatorUrl: resolved.calculatorUrl,
+        apiUrl: resolved.apiUrl,
+        domain: resolved.domain,
         technical: { slug: tenant.slug, configRef: tenant.configRef ?? null },
         stripe: {
           accountIdPresent: Boolean(tenant.stripeAccountId),

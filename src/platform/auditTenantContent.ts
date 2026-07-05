@@ -24,12 +24,12 @@ function walkStrings(value: unknown, path: string, out: Array<{ path: string; va
 }
 
 const CORRUPTED_PATTERNS: Array<{ id: string; re: RegExp }> = [
-  { id: "replacement_char", re: /�/g },
-  { id: "utf8_mojibake_ae", re: /Ã©/g },
-  { id: "utf8_mojibake_egrave", re: /Ã¨/g },
-  { id: "utf8_mojibake_ecirc", re: /Ãª/g },
-  { id: "utf8_mojibake_generic", re: /Ã[a-zA-Z]/g },
-  { id: "question_mark_word", re: /\b\w+\?\w+\b/g },
+  // IMPORTANT: pas de /g ici (évite lastIndex et diagnostics incohérents).
+  { id: "replacement_char", re: /�/ },
+  { id: "utf8_mojibake_ae", re: /Ã©/ },
+  { id: "utf8_mojibake_egrave", re: /Ã¨/ },
+  { id: "utf8_mojibake_ecirc", re: /Ãª/ },
+  { id: "utf8_mojibake_generic", re: /Ã[a-zA-Z]/ },
 ];
 
 const PLACEHOLDER_PATTERNS: Array<{ id: string; re: RegExp }> = [
@@ -95,32 +95,39 @@ export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
     }
   }
 
-  const required: Array<{ key: string; label: string }> = [
-    { key: "branding.name", label: "branding.name (nom commercial)" },
-    { key: "branding.siteUrl", label: "branding.siteUrl (URL publique)" },
-    { key: "contact.email", label: "contact.email" },
-    { key: "contact.phone", label: "contact.phone" },
+  // Schéma réel (front) : TenantSettingsV1.
+  // On tolère des variantes (anciens chemins) pour éviter les faux "manquants".
+  const required: Array<{ paths: string[]; label: string }> = [
+    { paths: ["general.commercialName", "general.name", "branding.name", "company.name"], label: "Nom commercial" },
+    { paths: ["contact.emailPublic", "contact.email", "company.email"], label: "Email public" },
+    { paths: ["contact.phoneE164", "contact.phoneDisplay", "contact.phone"], label: "Téléphone" },
+    { paths: ["contact.address.street", "contact.addressLine1", "company.address.street"], label: "Adresse (rue)" },
+    { paths: ["contact.address.postalCode", "contact.postalCode", "company.address.postalCode"], label: "Code postal" },
+    { paths: ["contact.address.city", "contact.city", "company.address.city"], label: "Ville" },
+    { paths: ["branding.logoSrc", "branding.logo", "branding.logoUrl"], label: "Logo" },
   ];
 
-  const missingRequiredFields: string[] = [];
-  if (tenantSettings && typeof tenantSettings === "object" && !Array.isArray(tenantSettings)) {
-    const root = tenantSettings as Record<string, unknown>;
-    const branding = (root.branding && typeof root.branding === "object" && !Array.isArray(root.branding)) ? (root.branding as Record<string, unknown>) : null;
-    const contact = (root.contact && typeof root.contact === "object" && !Array.isArray(root.contact)) ? (root.contact as Record<string, unknown>) : null;
-
-    const get = (key: string): string | null => {
-      if (key === "branding.name") return str(branding?.name);
-      if (key === "branding.siteUrl") return str(branding?.siteUrl);
-      if (key === "contact.email") return str(contact?.email);
-      if (key === "contact.phone") return str(contact?.phone);
-      return null;
-    };
-
-    for (const r of required) {
-      if (!get(r.key)) missingRequiredFields.push(r.label);
+  function getByPath(root: unknown, path: string): unknown {
+    if (!root || typeof root !== "object") return undefined;
+    const parts = path.split(".");
+    let cur: any = root;
+    for (const p of parts) {
+      if (!cur || typeof cur !== "object") return undefined;
+      cur = cur[p];
     }
-  } else {
-    missingRequiredFields.push(...required.map((r) => r.label));
+    return cur;
+  }
+
+  const missingRequiredFields: string[] = [];
+  for (const r of required) {
+    const found = r.paths.some((p) => {
+      const v = getByPath(tenantSettings, p);
+      if (typeof v === "string") return v.trim().length > 0;
+      // Tolère l’objet adresse etc.
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) return true;
+      return false;
+    });
+    if (!found) missingRequiredFields.push(r.label);
   }
 
   const warnings: string[] = [];

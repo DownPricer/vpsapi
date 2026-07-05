@@ -6,6 +6,7 @@ import { getPlatformHealth, getPlatformOverview } from "./platformOverview.contr
 import { getPlatformAlerts } from "./platformAlerts.controller";
 import { getPlatformOverviewCharts, getPlatformSiteCharts } from "./platformCharts.controller";
 import { getPlatformSitePlan } from "./platformPlan.controller";
+import { getPlatformEventsGrouped } from "./platformEventsGrouped.controller";
 import {
   getPlatformEvents,
   getPlatformSiteByTenantId,
@@ -69,6 +70,10 @@ export function createPlatformRouter(): Router {
 
   router.get("/events", requirePlatformAdmin, (req, res, next) => {
     void getPlatformEvents(req, res, next);
+  });
+
+  router.get("/events/grouped", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformEventsGrouped(req, res, next);
   });
 
   return router;

@@ -356,6 +356,10 @@ export function renderAdminAppPage(): string {
     };
     const badge = (label, kind) => '<span class="badge '+kind+'">'+safe(label)+'</span>';
 
+    const afterPaint = () => new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+
     const api = async (url, opts={}) => {
       const r = await fetch(url, { credentials:'include', ...opts });
       if (r.status === 401) { window.location.href='/admin/login'; return null; }
@@ -459,6 +463,7 @@ export function renderAdminAppPage(): string {
         api('/api/platform/events?range='+encodeURIComponent(state.range)+'&take=30'),
       ]);
       if (!ov || !charts || !alerts) return;
+      await afterPaint();
 
       const kpis = [
         ['Sites actifs', fmtInt(ov.tenants.active), fmtInt(ov.tenants.total)+' total'],
@@ -484,6 +489,7 @@ export function renderAdminAppPage(): string {
         ]},
         options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#a8b3d1' } } }, scales:{ x:{ ticks:{ color:'#7f8bb0' } }, y:{ ticks:{ color:'#7f8bb0' } } } }
       }));
+      setTimeout(() => { try { state.charts.activity && state.charts.activity.resize(); } catch {} }, 0);
 
       destroyChart('revenue', new Chart($('chRevenue'), {
         type:'line',
@@ -493,6 +499,7 @@ export function renderAdminAppPage(): string {
         ]},
         options:{ plugins:{ legend:{ labels:{ color:'#a8b3d1' } } }, scales:{ x:{ ticks:{ color:'#7f8bb0' } }, y:{ ticks:{ color:'#7f8bb0' } } } }
       }));
+      setTimeout(() => { try { state.charts.revenue && state.charts.revenue.resize(); } catch {} }, 0);
 
       const st = charts.serviceTypes || [];
       destroyChart('service', new Chart($('chServiceTypes'), {
@@ -500,6 +507,7 @@ export function renderAdminAppPage(): string {
         data:{ labels: st.map(x=>x.key), datasets:[{ data: st.map(x=>x.cnt), backgroundColor:['#6ea8fe','#2ecc71','#f1c40f','#ff6b6b','#a8b3d1'] }] },
         options:{ plugins:{ legend:{ labels:{ color:'#a8b3d1' } } } }
       }));
+      setTimeout(() => { try { state.charts.service && state.charts.service.resize(); } catch {} }, 0);
 
       const top = charts.topSites || [];
       destroyChart('topSites', new Chart($('chTopSites'), {
@@ -507,6 +515,7 @@ export function renderAdminAppPage(): string {
         data:{ labels: top.map(x=>x.name), datasets:[{ label:'CA payé', data: top.map(x=>x.revenuePaidCents/100), backgroundColor:'rgba(110,168,254,.45)', borderColor:'#6ea8fe', borderWidth:1 }] },
         options:{ plugins:{ legend:{ labels:{ color:'#a8b3d1' } } }, scales:{ x:{ ticks:{ color:'#7f8bb0' } }, y:{ ticks:{ color:'#7f8bb0' } } } }
       }));
+      setTimeout(() => { try { state.charts.topSites && state.charts.topSites.resize(); } catch {} }, 0);
 
       // Sites à surveiller
       const rows = alerts.sitesToWatch || [];
@@ -553,12 +562,8 @@ export function renderAdminAppPage(): string {
       }));
 
       // Activités importantes
-      const ev = (recent && recent.events) ? recent.events : (recent || []);
       $('recentEvents').innerHTML = '';
-      renderTimeline($('recentEvents'), (recent && recent.events) ? recent.events : (recent?.events ?? recent?.recentEvents ?? []));
-      if (recent && recent.events) renderTimeline($('recentEvents'), recent.events);
-      else if (recent && Array.isArray(recent)) renderTimeline($('recentEvents'), recent);
-      else renderTimeline($('recentEvents'), []);
+      renderTimeline($('recentEvents'), (recent && recent.events) ? recent.events : []);
     }
 
     async function viewSites(){
@@ -621,6 +626,7 @@ export function renderAdminAppPage(): string {
         api('/api/platform/sites/'+encodeURIComponent(tenantId)+'/events?range='+encodeURIComponent(state.range)+'&take=80'),
       ]);
       if (!site || !metrics || !charts || !audit) return;
+      await afterPaint();
 
       const a = audit.audit;
       const plan = planResp ? planResp.plan : null;
@@ -700,7 +706,10 @@ export function renderAdminAppPage(): string {
       $('siteFunnel').innerHTML =
         '<table class="table"><thead><tr><th>Étape</th><th class="right">Volume</th></tr></thead><tbody>' +
         '<tr><td>Pages vues</td><td class="right">'+fmtInt(f.pageViews)+'</td></tr>' +
-        '<tr><td>Calculs</td><td class="right">'+fmtInt(f.quotes)+'</td></tr>' +
+        '<tr><td>Ouverture calculateur</td><td class="right">'+fmtInt(f.calculatorOpened)+'</td></tr>' +
+        '<tr><td>Début de saisie</td><td class="right">'+fmtInt(f.calculatorStarted)+'</td></tr>' +
+        '<tr><td>Prix affiché</td><td class="right">'+fmtInt(f.quoteDisplayed)+'</td></tr>' +
+        '<tr><td>Calculs API</td><td class="right">'+fmtInt(f.quotesApi)+'</td></tr>' +
         '<tr><td>Demandes</td><td class="right">'+fmtInt(f.demands)+'</td></tr>' +
         '<tr><td>Réservations</td><td class="right">'+fmtInt(f.reservations)+'</td></tr>' +
         '<tr><td>Paiements</td><td class="right">'+fmtInt(f.payments)+'</td></tr>' +
@@ -717,11 +726,13 @@ export function renderAdminAppPage(): string {
         ]},
         options:{ plugins:{ legend:{ labels:{ color:'#a8b3d1' } } }, scales:{ x:{ ticks:{ color:'#7f8bb0' } }, y:{ ticks:{ color:'#7f8bb0' } } } }
       }));
+      setTimeout(() => { try { state.chartsSite.siteActivity && state.chartsSite.siteActivity.resize(); } catch {} }, 0);
       destroySiteChart('siteService', new Chart($('chSiteService'), {
         type:'doughnut',
         data:{ labels: (charts.serviceTypes||[]).map(x=>x.key), datasets:[{ data: (charts.serviceTypes||[]).map(x=>x.cnt), backgroundColor:['#6ea8fe','#2ecc71','#f1c40f','#ff6b6b','#a8b3d1'] }] },
         options:{ plugins:{ legend:{ labels:{ color:'#a8b3d1' } } } }
       }));
+      setTimeout(() => { try { state.chartsSite.siteService && state.chartsSite.siteService.resize(); } catch {} }, 0);
 
       // Events site (timeline)
       $('siteEvents').innerHTML = '';
@@ -731,16 +742,38 @@ export function renderAdminAppPage(): string {
     async function viewEvents(){
       setNavActive('events');
       setPage('Activité', 'Journal filtrable: calculateur, réservations, paiements, emails, erreurs.');
+      const tenantId = ($('evTenant').value||'').trim();
+      const type = ($('evType').value||'').trim();
+      if (!tenantId && !type) {
+        const grouped = await api('/api/platform/events/grouped?range='+encodeURIComponent(state.range)+'&by=day&take=120');
+        if (!grouped) return;
+        const groups = grouped.groups || [];
+        $('eventsTimeline').innerHTML = groups.length === 0 ? '<div class="empty">Aucune activité sur la période.</div>' :
+          '<table class="table"><thead><tr><th>Période</th><th>Site</th><th>Type</th><th class="right">Occurrences</th><th>Dernier</th><th class="right">Action</th></tr></thead><tbody>' +
+          groups.map(g => (
+            '<tr>' +
+              '<td class="mono">'+safe(g.bucket)+'</td>' +
+              '<td class="mono">'+safe(g.tenantId||'—')+'</td>' +
+              '<td>'+safe(g.type)+'</td>' +
+              '<td class="right">'+fmtInt(g.count)+'</td>' +
+              '<td class="muted">'+safe(fmtDateTime(g.lastAt))+'</td>' +
+              '<td class="right">'+(g.tenantId?('<button class="btn ghost" data-open="'+safe(g.tenantId)+'">Fiche</button>'):'')+'</td>' +
+            '</tr>'
+          )).join('') +
+          '</tbody></table>';
+        $('eventsTimeline').querySelectorAll('button[data-open]').forEach(b => b.addEventListener('click', () => {
+          window.location.hash = '#/site/'+b.getAttribute('data-open');
+        }));
+        return;
+      }
       const qs = new URLSearchParams();
       qs.set('range', state.range);
       qs.set('take', '200');
-      const tenantId = ($('evTenant').value||'').trim();
-      const type = ($('evType').value||'').trim();
       if (tenantId) qs.set('tenantId', tenantId);
       if (type) qs.set('type', type);
       const data = await api('/api/platform/events?'+qs.toString());
       if (!data) return;
-      renderTimeline($('eventsTimeline'), data.events);
+      renderTimeline($('eventsTimeline'), data.events || []);
     }
 
     async function viewHealth(){
