@@ -64,6 +64,8 @@ function sanitizeMetadata(value: unknown, depth = 0): Prisma.InputJsonValue | nu
 
 export type TrackPlatformEventInput = {
   tenantId?: string | null;
+  observedDomain?: string | null;
+  origin?: string | null;
   type: PlatformEventType | string;
   category?: string | null;
   path?: string | null;
@@ -89,6 +91,8 @@ export async function trackPlatformEvent(input: TrackPlatformEventInput): Promis
     await prisma.platformEvent.create({
       data: {
         tenantId: input.tenantId ?? null,
+        observedDomain: input.observedDomain ? truncate(input.observedDomain, 255) : null,
+        origin: input.origin ? truncate(input.origin, 300) : null,
         type: truncate(String(input.type), 80),
         category: input.category ? truncate(input.category, 80) : null,
         path: input.path ? truncate(input.path, 300) : null,
@@ -107,6 +111,8 @@ export async function trackPlatformEvent(input: TrackPlatformEventInput): Promis
 
 export function trackFromRequest(params: {
   tenantId?: string | null;
+  observedDomain?: string | null;
+  origin?: string | null;
   type: PlatformEventType | string;
   category?: string | null;
   reqIp?: string;
@@ -121,6 +127,8 @@ export function trackFromRequest(params: {
   const ip = resolveClientIp(params.reqIp, params.forwardedFor);
   return trackPlatformEvent({
     tenantId: params.tenantId ?? null,
+    observedDomain: params.observedDomain ?? null,
+    origin: params.origin ?? null,
     type: params.type,
     category: params.category ?? null,
     path: params.path ?? null,

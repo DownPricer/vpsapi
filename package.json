@@ -18,7 +18,8 @@
     "verify:pricing-config-roundtrip": "tsx src/scripts/verifyPricingConfigRoundtrip.ts",
     "verify:classic-base-segments": "tsx src/scripts/verifyClassicBaseSegments.ts",
     "verify:tenant-vs-pricing-config": "tsx src/scripts/verifyTenantEnginePricingConfigParity.ts",
-    "verify:pricing-config": "tsx src/scripts/verifyPricingConfig.ts"
+    "verify:pricing-config": "tsx src/scripts/verifyPricingConfig.ts",
+    "platform:fix-default-domain": "tsx src/scripts/fixDefaultDomain.ts"
   },
   "engines": {
     "node": ">=20"

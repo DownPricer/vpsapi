@@ -8,6 +8,14 @@ import { getPlatformOverviewCharts, getPlatformSiteCharts } from "./platformChar
 import { getPlatformSitePlan } from "./platformPlan.controller";
 import { getPlatformEventsGrouped } from "./platformEventsGrouped.controller";
 import {
+  addTenantDomain,
+  confirmPlatformDomain,
+  createPlatformTenant,
+  createTenantFromDomain,
+  getPlatformDomains,
+  rejectPlatformDomain,
+} from "./platformDomains.controller";
+import {
   getPlatformEvents,
   getPlatformSiteByTenantId,
   getPlatformSiteAudit,
@@ -42,6 +50,30 @@ export function createPlatformRouter(): Router {
 
   router.get("/sites", requirePlatformAdmin, (req, res, next) => {
     void getPlatformSites(req, res, next);
+  });
+
+  router.post("/tenants", requirePlatformAdmin, (req, res, next) => {
+    void createPlatformTenant(req, res, next);
+  });
+
+  router.post("/tenants/:tenantId/domains", requirePlatformAdmin, (req, res, next) => {
+    void addTenantDomain(req, res, next);
+  });
+
+  router.get("/domains", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformDomains(req, res, next);
+  });
+
+  router.post("/domains/:id/confirm", requirePlatformAdmin, (req, res, next) => {
+    void confirmPlatformDomain(req, res, next);
+  });
+
+  router.post("/domains/:id/create-tenant", requirePlatformAdmin, (req, res, next) => {
+    void createTenantFromDomain(req, res, next);
+  });
+
+  router.post("/domains/:id/reject", requirePlatformAdmin, (req, res, next) => {
+    void rejectPlatformDomain(req, res, next);
   });
 
   router.get("/sites/:tenantId", requirePlatformAdmin, (req, res, next) => {

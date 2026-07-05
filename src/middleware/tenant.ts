@@ -1,22 +1,56 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AppEnv } from "../config/env";
 import { getTenantConfig } from "../config/tenants/registry";
+import { resolveTenantFromRequest } from "../tenancy/domainResolver";
 import { sendTenantNotFound } from "../utils/apiResponse";
 
 export function tenantMiddleware(env: AppEnv) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const raw = req.headers["x-tenant-id"];
-    const fromHeader = typeof raw === "string" ? raw.trim() : "";
-    const tenantId = fromHeader.length > 0 ? fromHeader : env.defaultTenantId;
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const resolution = await resolveTenantFromRequest(req, {
+        fallbackTenantId: env.defaultTenantId,
+        allowPendingCreate: true,
+        metadata: req.body?.metadata ?? req.body,
+      });
+      if (resolution.source === "pending_domain" && resolution.observedDomain) {
+        res.status(409).json({
+          success: false,
+          error: {
+            code: "DOMAIN_PENDING",
+            message: "Domaine détecté mais non confirmé. Associez ce domaine à un tenant dans le super-admin.",
+            domain: resolution.observedDomain,
+          },
+        });
+        return;
+      }
+      const tenantId = resolution.tenantId ?? env.defaultTenantId;
 
-    const tenant = getTenantConfig(tenantId);
-    if (!tenant) {
-      sendTenantNotFound(res, tenantId);
-      return;
+      const tenantConfig = getTenantConfig(tenantId);
+      const fallbackConfig = tenantConfig ? null : getTenantConfig(env.defaultTenantId);
+      const tenant = tenantConfig ?? (fallbackConfig ? { ...fallbackConfig, id: tenantId } : undefined);
+      if (!tenant) {
+        sendTenantNotFound(res, tenantId);
+        return;
+      }
+
+      req.tenantId = tenantId;
+      req.tenant = tenant;
+      req.tenantResolution = {
+        tenantId,
+        source:
+          resolution.source === "domain_active"
+            ? "domain_active"
+            : resolution.source === "header"
+              ? "header"
+              : "fallback_default",
+        observedDomain: resolution.observedDomain,
+        matchedDomain: resolution.matchedDomain,
+        domainStatus: resolution.domainStatus,
+        origin: resolution.origin,
+      };
+      next();
+    } catch (e) {
+      next(e);
     }
-
-    req.tenantId = tenantId;
-    req.tenant = tenant;
-    next();
   };
 }

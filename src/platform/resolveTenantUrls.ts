@@ -1,3 +1,5 @@
+import { isTechnicalDomain, normalizeDomain } from "../tenancy/domainResolver";
+
 function normUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
 }
@@ -40,6 +42,7 @@ export function resolveTenantUrls(params: {
   tenantId: string;
   settings: unknown | null;
   apiBaseUrl?: string | null;
+  domain?: string | null;
 }): TenantResolvedUrls {
   const candidates = [
     "branding.siteUrl",
@@ -50,14 +53,18 @@ export function resolveTenantUrls(params: {
     "meta.siteUrl",
     "publicUrl",
     "siteUrl",
-    "legal.hosting.website", // présent côté front (businessConfig) / parfois copié
   ];
 
-  let publicUrl: string | null = null;
+  const domainFromDb = normalizeDomain(params.domain);
+  let publicUrl: string | null = domainFromDb && !isTechnicalDomain(domainFromDb) ? `https://${domainFromDb}` : null;
   for (const p of candidates) {
+    if (publicUrl) break;
     const v = safeString(getByPath(params.settings, p));
     if (v && (v.startsWith("http://") || v.startsWith("https://"))) {
-      publicUrl = normUrl(v);
+      const hostname = extractHostname(v);
+      if (hostname && !isTechnicalDomain(hostname)) {
+        publicUrl = normUrl(v);
+      }
       break;
     }
   }

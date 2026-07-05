@@ -228,6 +228,7 @@ export function renderAdminAppPage(): string {
       <nav class="nav">
         <a id="nav-overview" href="#/overview">Vue globale</a>
         <a id="nav-sites" href="#/sites">Sites</a>
+        <a id="nav-domains" href="#/domains">Sites détectés</a>
         <a id="nav-events" href="#/events">Activité</a>
         <a id="nav-health" href="#/health">Santé & alertes</a>
       </nav>
@@ -338,6 +339,15 @@ export function renderAdminAppPage(): string {
         <div class="card" id="eventsTimeline"></div>
       </section>
 
+      <section id="view-domains" style="display:none">
+        <div class="hrow" style="margin-bottom:10px">
+          <div class="chip">Domaines actifs + domaines à confirmer</div>
+          <div class="spacer"></div>
+          <button id="domainsReload" class="btn primary">Rafraîchir</button>
+        </div>
+        <div class="card" id="domainsTable"></div>
+      </section>
+
       <section id="view-health" style="display:none">
         <div class="grid" id="healthKpis"></div>
         <div class="sectionTitle">Alertes prioritaires</div>
@@ -379,7 +389,7 @@ export function renderAdminAppPage(): string {
     };
 
     function setNavActive(key){
-      ['overview','sites','events','health'].forEach(k => {
+      ['overview','sites','domains','events','health'].forEach(k => {
         const el = $('nav-'+k);
         if (el) el.classList.toggle('active', k===key);
       });
@@ -593,7 +603,12 @@ export function renderAdminAppPage(): string {
             s.status.priority === 'moyen' ? badge('Moyen','warn') :
             badge('Faible','ok');
           const dom = s.siteUrl ? '<a class="mono" href="'+safe(s.siteUrl)+'" target="_blank" rel="noreferrer">'+safe(s.siteUrl)+'</a>' : '<span class="muted">—</span>';
-          const acts =
+          const isPending = !!s.detectedDomain;
+          const acts = isPending
+            ? '<button class="btn ghost" data-domain-confirm="'+safe(s.detectedDomain.id)+'">Associer</button> ' +
+              '<button class="btn ghost" data-domain-create="'+safe(s.detectedDomain.id)+'">Créer tenant</button> ' +
+              '<button class="btn danger" data-domain-reject="'+safe(s.detectedDomain.id)+'">Rejeter</button>'
+            :
             (s.siteUrl ? '<a class="btn ghost" href="'+safe(s.siteUrl)+'" target="_blank" rel="noreferrer">Site</a> ' : '') +
             '<button class="btn ghost" data-open="'+safe(s.tenantId)+'">Fiche</button> ' +
             (s.adminUrl ? '<a class="btn ghost" href="'+safe(s.adminUrl)+'" target="_blank" rel="noreferrer">Admin</a>' : '');
@@ -613,6 +628,66 @@ export function renderAdminAppPage(): string {
       $('sitesTable').querySelectorAll('button[data-open]').forEach(b => b.addEventListener('click', () => {
         window.location.hash = '#/site/'+b.getAttribute('data-open');
       }));
+      bindDomainActions($('sitesTable'));
+    }
+
+    function bindDomainActions(root){
+      root.querySelectorAll('button[data-domain-confirm]').forEach(b => b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-domain-confirm');
+        const tenantId = prompt('Tenant existant à associer (ex: default)');
+        if (!tenantId) return;
+        await api('/api/platform/domains/'+encodeURIComponent(id)+'/confirm', {
+          method:'POST',
+          headers:{'Content-Type':'application/json; charset=utf-8'},
+          body: JSON.stringify({ tenantId, canonicalDomain: true })
+        });
+        await router();
+      }));
+      root.querySelectorAll('button[data-domain-create]').forEach(b => b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-domain-create');
+        const name = prompt('Nom du nouveau site/tenant');
+        if (!name) return;
+        await api('/api/platform/domains/'+encodeURIComponent(id)+'/create-tenant', {
+          method:'POST',
+          headers:{'Content-Type':'application/json; charset=utf-8'},
+          body: JSON.stringify({ name })
+        });
+        await router();
+      }));
+      root.querySelectorAll('button[data-domain-reject]').forEach(b => b.addEventListener('click', async () => {
+        const id = b.getAttribute('data-domain-reject');
+        if (!confirm('Rejeter ce domaine détecté ?')) return;
+        await api('/api/platform/domains/'+encodeURIComponent(id)+'/reject', { method:'POST' });
+        await router();
+      }));
+    }
+
+    async function viewDomains(){
+      setNavActive('domains');
+      setPage('Sites détectés', 'Domaines actifs, domaines observés automatiquement et associations tenant.');
+      const data = await api('/api/platform/domains');
+      if (!data) return;
+      const rows = data.domains || [];
+      $('domainsTable').innerHTML = rows.length === 0 ? '<div class="empty">Aucun domaine détecté.</div>' :
+        '<table class="table"><thead><tr><th>Domaine</th><th>Tenant</th><th>Statut</th><th>Source</th><th class="right">Events</th><th>Dernière activité</th><th class="right">Actions</th></tr></thead><tbody>' +
+        rows.map(d => {
+          const st = d.status === 'active' ? badge('Actif','ok') : d.status === 'pending' ? badge('À confirmer','warn') : badge(d.status,'bad');
+          const actions = d.status === 'pending'
+            ? '<button class="btn ghost" data-domain-confirm="'+safe(d.id)+'">Associer</button> ' +
+              '<button class="btn ghost" data-domain-create="'+safe(d.id)+'">Créer tenant</button> ' +
+              '<button class="btn danger" data-domain-reject="'+safe(d.id)+'">Rejeter</button>'
+            : '<button class="btn ghost" data-domain-confirm="'+safe(d.id)+'">Réassocier</button>';
+          return '<tr>' +
+            '<td><a class="mono" href="https://'+safe(d.domain)+'" target="_blank" rel="noreferrer">'+safe(d.domain)+'</a><div class="muted">'+safe((d.eventTypes||[]).slice(0,5).join(', '))+'</div></td>' +
+            '<td>'+(d.tenant?('<div style="font-weight:900">'+safe(d.tenant.name)+'</div><div class="muted mono">'+safe(d.tenant.id)+'</div>'):'<span class="muted">—</span>')+'</td>' +
+            '<td>'+st+'</td>' +
+            '<td>'+safe(d.source)+(d.canonicalDomain?' · canonique':'')+'</td>' +
+            '<td class="right">'+fmtInt(d.eventsCount)+'</td>' +
+            '<td class="muted">'+safe(fmtDateTime(d.lastEventAt || d.lastSeenAt))+'</td>' +
+            '<td class="right">'+actions+'</td>' +
+          '</tr>';
+        }).join('') + '</tbody></table>';
+      bindDomainActions($('domainsTable'));
     }
 
     async function viewSite(tenantId){
@@ -815,7 +890,7 @@ export function renderAdminAppPage(): string {
     }
 
     function show(view){
-      ['view-overview','view-sites','view-events','view-health','view-site'].forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+      ['view-overview','view-sites','view-domains','view-events','view-health','view-site'].forEach(id => { const el=$(id); if(el) el.style.display='none'; });
       const el = $(view);
       if (el) el.style.display = '';
     }
@@ -829,6 +904,7 @@ export function renderAdminAppPage(): string {
 
       if (page === 'overview'){ show('view-overview'); await viewOverview(); return; }
       if (page === 'sites'){ show('view-sites'); await viewSites(); return; }
+      if (page === 'domains'){ show('view-domains'); await viewDomains(); return; }
       if (page === 'site'){ show('view-site'); const tid = parts[1] || ''; await viewSite(tid); return; }
       if (page === 'events'){ show('view-events'); await viewEvents(); return; }
       if (page === 'health'){ show('view-health'); await viewHealth(); return; }
@@ -847,6 +923,7 @@ export function renderAdminAppPage(): string {
     $('reload').addEventListener('click', () => router().catch(()=>{}));
     $('logout').addEventListener('click', async () => { try { await fetch('/api/platform/auth/logout', { method:'POST', credentials:'include' }); } catch {} window.location.href='/admin/login'; });
     $('evReload').addEventListener('click', () => viewEvents().catch(()=>{}));
+    $('domainsReload').addEventListener('click', () => viewDomains().catch(()=>{}));
     window.addEventListener('hashchange', () => router().catch(()=>{}));
 
     (async function init(){

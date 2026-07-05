@@ -30,6 +30,8 @@ export async function postCalculerTarif(
     );
     void trackFromRequest({
       tenantId: req.tenantId,
+      observedDomain: req.tenantResolution?.observedDomain ?? null,
+      origin: req.tenantResolution?.origin ?? null,
       type: "calculator_quote_success",
       category: "calculator",
       reqIp: req.ip,
@@ -42,6 +44,8 @@ export async function postCalculerTarif(
         estimatedPrice: typeof (serialized as any)?.tarif === "number" ? (serialized as any).tarif : undefined,
         pricingConfigSource,
         pricingConfigVersion: pricingConfigVersion ?? undefined,
+        tenantResolution: req.tenantResolution?.source,
+        matchedDomain: req.tenantResolution?.matchedDomain,
       },
     });
     sendSuccess(res, serialized, {
@@ -60,6 +64,8 @@ export async function postCalculerTarif(
     if (e instanceof PricingConfigRequestError) {
       void trackFromRequest({
         tenantId: req.tenantId,
+        observedDomain: req.tenantResolution?.observedDomain ?? null,
+        origin: req.tenantResolution?.origin ?? null,
         type: "calculator_quote_failed",
         category: "calculator",
         reqIp: req.ip,
@@ -70,6 +76,8 @@ export async function postCalculerTarif(
         metadata: {
           serviceType: resolveServiceTypeKey(parsed.data) ?? "unknown",
           reason: e.message,
+          tenantResolution: req.tenantResolution?.source,
+          matchedDomain: req.tenantResolution?.matchedDomain,
         },
       });
       sendValidationError(
@@ -83,6 +91,8 @@ export async function postCalculerTarif(
     if (message.startsWith("Type de service inconnu") || message.includes("Type de service")) {
       void trackFromRequest({
         tenantId: req.tenantId,
+        observedDomain: req.tenantResolution?.observedDomain ?? null,
+        origin: req.tenantResolution?.origin ?? null,
         type: "calculator_quote_failed",
         category: "calculator",
         reqIp: req.ip,
@@ -90,7 +100,7 @@ export async function postCalculerTarif(
         userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
         path: "/api/calculer-tarif",
         referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
-        metadata: { reason: message },
+        metadata: { reason: message, tenantResolution: req.tenantResolution?.source, matchedDomain: req.tenantResolution?.matchedDomain },
       });
       sendValidationError(res, message);
       return;
@@ -98,6 +108,8 @@ export async function postCalculerTarif(
     if (message.includes("DISTANCE_MATRIX_API_KEY")) {
       void trackFromRequest({
         tenantId: req.tenantId,
+        observedDomain: req.tenantResolution?.observedDomain ?? null,
+        origin: req.tenantResolution?.origin ?? null,
         type: "api_error",
         category: "calculator",
         reqIp: req.ip,
@@ -105,7 +117,7 @@ export async function postCalculerTarif(
         userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
         path: "/api/calculer-tarif",
         referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
-        metadata: { status: 500, message: "CONFIG_ERROR: DISTANCE_MATRIX_API_KEY" },
+        metadata: { status: 500, message: "CONFIG_ERROR: DISTANCE_MATRIX_API_KEY", tenantResolution: req.tenantResolution?.source, matchedDomain: req.tenantResolution?.matchedDomain },
       });
       res.status(500).json({
         success: false,

@@ -87,6 +87,29 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
       },
     });
 
+    const activeDomains = await prisma.tenantDomain.findMany({
+      where: { status: "active", tenantId: { not: null } },
+      orderBy: [{ canonicalDomain: "desc" }, { updatedAt: "desc" }],
+    });
+    const pendingDomains = await prisma.tenantDomain.findMany({
+      where: { status: "pending" },
+      orderBy: { lastSeenAt: "desc" },
+      take: 200,
+    });
+    const pendingEventRows = await prisma.$queryRaw<Array<{ observedDomain: string; cnt: bigint; lastAt: Date }>>`
+      SELECT "observedDomain" as "observedDomain", count(*)::bigint as cnt, max("createdAt") as "lastAt"
+      FROM "PlatformEvent"
+      WHERE "observedDomain" IS NOT NULL AND "tenantId" IS NULL
+      GROUP BY 1
+    `;
+    const pendingStats = new Map<string, { count: number; lastAt: Date }>(
+      pendingEventRows.map((r) => [r.observedDomain, { count: Number(r.cnt), lastAt: r.lastAt }])
+    );
+    const domainByTenant = new Map<string, string>();
+    for (const d of activeDomains) {
+      if (d.tenantId && !domainByTenant.has(d.tenantId)) domainByTenant.set(d.tenantId, d.domain);
+    }
+
     // Agrégations (range) : leads + paiements
     const leadAgg = await prisma.leadRequest.groupBy({
       by: ["tenantId"],
@@ -181,6 +204,7 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
           tenantId: t.id,
           settings: t.settings ?? null,
           apiBaseUrl: "https://api.sitereadyshd.fr",
+          domain: domainByTenant.get(t.id) ?? null,
         });
         const audit = auditTenantContent(t.settings);
         const stripeConnected = Boolean(t.stripeAccountId);
@@ -314,7 +338,63 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
         return true;
       });
 
-    res.status(200).json({ success: true, data: { range, count: rows.length, sites: rows } });
+    const detectedRows = pendingDomains
+      .map((d) => {
+        const s = pendingStats.get(d.domain);
+        return {
+          tenantId: `pending:${d.domain}`,
+          name: `Nouveau domaine détecté`,
+          companyName: null,
+          email: null,
+          phone: null,
+          city: null,
+          active: false,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+          siteUrl: `https://${d.domain}`,
+          adminUrl: null,
+          calculatorUrl: `https://${d.domain}/calculateur`,
+          apiUrl: "https://api.sitereadyshd.fr",
+          domain: d.domain,
+          detectedDomain: {
+            id: d.id,
+            status: d.status,
+            source: d.source,
+            firstSeenAt: d.firstSeenAt,
+            lastSeenAt: d.lastSeenAt,
+            eventsCount: s?.count ?? 0,
+          },
+          status: {
+            global: "warning",
+            globalFine: "a_configurer",
+            globalLabel: "Domaine à confirmer",
+            priority: "important",
+            riskScore: 50,
+            readinessScore: 0,
+            accentsOk: true,
+            contentOk: false,
+            stripeConnected: false,
+            stripeOk: false,
+            daysSinceActivity: null,
+            reasons: ["Domaine détecté automatiquement, non associé à un tenant."],
+            nextAction: "Associer le domaine à un tenant ou créer un site.",
+          },
+          plan: { actions: [] },
+          alerts: [{ severity: "warning" as const, label: "Domaine à confirmer" }],
+          stripe: { accountIdPresent: false, onboardingStatus: "NOT_STARTED", chargesEnabled: false, payoutsEnabled: false, detailsSubmitted: false },
+          payment: { onlineEnabled: false, mode: "FULL" },
+          metrics: { leadsTotal: 0, leadsInRange: 0, paymentsPaidInRange: 0, paymentsFailedInRange: 0, amountPaidInRangeCents: 0, amountPaidTotalCents: 0 },
+          lastActivityAt: s?.lastAt ?? d.lastSeenAt,
+        };
+      })
+      .filter((r) => {
+        if (!q) return true;
+        const needle = q.toLowerCase();
+        return r.tenantId.toLowerCase().includes(needle) || r.name.toLowerCase().includes(needle) || r.domain.toLowerCase().includes(needle);
+      });
+
+    const allRows = [...rows, ...detectedRows];
+    res.status(200).json({ success: true, data: { range, count: allRows.length, sites: allRows } });
   } catch (e) {
     next(e);
   }
@@ -356,10 +436,15 @@ export async function getPlatformSiteByTenantId(req: Request, res: Response, nex
       return;
     }
     const ident = pickSettingsIdentity(tenant.settings);
+    const activeDomain = await prisma.tenantDomain.findFirst({
+      where: { tenantId: tenant.id, status: "active" },
+      orderBy: [{ canonicalDomain: "desc" }, { updatedAt: "desc" }],
+    });
     const resolved = resolveTenantUrls({
       tenantId: tenant.id,
       settings: tenant.settings ?? null,
       apiBaseUrl: "https://api.sitereadyshd.fr",
+      domain: activeDomain?.domain ?? null,
     });
     res.status(200).json({
       success: true,
