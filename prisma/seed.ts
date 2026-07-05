@@ -1,6 +1,6 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { OperatorRole } from "@prisma/client";
+import { OperatorRole, PlatformAdminRole } from "@prisma/client";
 import { PrismaClient } from "@prisma/client";
 import { listTenantConfigs } from "../src/config/tenants/registry";
 
@@ -44,6 +44,27 @@ async function main() {
         passwordHash: hash,
         role: OperatorRole.admin,
         active: true,
+      },
+    });
+  }
+
+  const platformEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
+  const platformPassword = process.env.PLATFORM_ADMIN_PASSWORD?.trim();
+  const platformName = process.env.PLATFORM_ADMIN_NAME?.trim();
+  if (platformEmail && platformPassword) {
+    const hash = await bcrypt.hash(platformPassword, 12);
+    await prisma.platformAdminUser.upsert({
+      where: { email: platformEmail },
+      update: {
+        passwordHash: hash,
+        role: PlatformAdminRole.OWNER,
+        ...(platformName ? { name: platformName } : {}),
+      },
+      create: {
+        email: platformEmail,
+        passwordHash: hash,
+        role: PlatformAdminRole.OWNER,
+        ...(platformName ? { name: platformName } : {}),
       },
     });
   }

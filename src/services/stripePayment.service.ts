@@ -9,6 +9,7 @@ import {
 } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { getStripeClient, isStripeConfigured } from "./stripe/stripeClient";
+import { trackPlatformEvent } from "../platform/telemetry.service";
 
 export class PaymentLinkError extends Error {
   readonly code: string;
@@ -395,6 +396,20 @@ export class StripePaymentService {
           data: { paymentStatus: LeadPaymentStatus.LINK_SENT },
         }),
       ]);
+
+      void trackPlatformEvent({
+        tenantId: input.tenantId,
+        type: "payment_checkout_created",
+        category: "stripe",
+        path: "/api/pro/stripe",
+        metadata: {
+          paymentId: payment.id,
+          leadRequestId: input.leadRequestId,
+          mode: input.mode,
+          amountCents: chargeCents,
+          applicationFeeAmountCents: applicationFeeAmount,
+        },
+      });
 
       return {
         paymentId: payment.id,

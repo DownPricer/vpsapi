@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { z } from "zod";
 import { loadEnv } from "../config/env";
 import { AuthService } from "../services/auth.service";
+import { trackFromRequest } from "../platform/telemetry.service";
 
 const env = loadEnv();
 const authService = new AuthService();
@@ -50,9 +51,31 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
       userAgent: req.headers["user-agent"],
     });
     setRefreshCookie(res, result.refreshToken);
+    void trackFromRequest({
+      tenantId: req.tenantId,
+      type: "pro_login_success",
+      category: "pro_auth",
+      reqIp: req.ip,
+      forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+      userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+      path: "/api/auth/login",
+      referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
+      metadata: { userId: result.user.id, role: result.user.role },
+    });
     res.json({ success: true, data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erreur login";
+    void trackFromRequest({
+      tenantId: req.tenantId,
+      type: "pro_login_failed",
+      category: "pro_auth",
+      reqIp: req.ip,
+      forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+      userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+      path: "/api/auth/login",
+      referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
+      metadata: { email: parsed.data.email.toLowerCase(), reason: message.slice(0, 200) },
+    });
     res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message } });
   }
 }

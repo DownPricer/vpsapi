@@ -4,6 +4,7 @@ import { z } from "zod";
 import { TenantSettingsService } from "../services/tenantSettings.service";
 import { sendValidationError } from "../utils/apiResponse";
 import { validateTenantSettingsPayload } from "../validation/tenantSettingsPayload";
+import { trackPlatformEvent } from "../platform/telemetry.service";
 
 const putBodySchema = z.object({
   settings: z.unknown(),
@@ -85,6 +86,13 @@ export async function putProTenantSettings(req: Request, res: Response, next: Ne
 
   try {
     await tenantSettingsService.saveSettings(tenantId, validated.value as Prisma.InputJsonValue);
+    void trackPlatformEvent({
+      tenantId,
+      type: "pro_settings_saved",
+      category: "pro",
+      path: "/api/pro/settings",
+      metadata: { persisted: true },
+    });
     res.status(200).json({
       success: true,
       data: { settings: validated.value },

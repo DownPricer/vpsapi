@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { getStripeClient } from "../services/stripe/stripeClient";
 import { processStripeWebhookEvent } from "../services/stripeWebhook.service";
+import { trackFromRequest } from "../platform/telemetry.service";
 
 function webhookSecret(): string | undefined {
   const s = process.env.STRIPE_WEBHOOK_SECRET?.trim();
@@ -78,6 +79,18 @@ export async function postStripeWebhook(
     });
     return;
   }
+
+  void trackFromRequest({
+    tenantId: null,
+    type: "stripe_webhook_received",
+    category: "stripe",
+    reqIp: req.ip,
+    forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+    userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+    path: "/api/stripe/webhook",
+    referrer: undefined,
+    metadata: { stripeEventType: event.type, stripeEventId: event.id },
+  });
 
   try {
     await prisma.stripeWebhookEvent.create({

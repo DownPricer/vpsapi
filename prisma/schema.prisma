@@ -67,6 +67,12 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum PlatformAdminRole {
+  OWNER
+  ADMIN
+  READONLY
+}
+
 enum LeadPaymentStatus {
   NONE
   PENDING
@@ -243,4 +249,37 @@ model AuthSession {
 
   @@index([tenantId, userId])
   @@index([expiresAt])
+}
+
+model PlatformAdminUser {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  passwordHash String
+  name         String?
+  role         PlatformAdminRole @default(OWNER)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  lastLoginAt  DateTime?
+
+  @@index([role])
+  @@index([createdAt(sort: Desc)])
+}
+
+model PlatformEvent {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  type      String
+  category  String?
+  path      String?
+  referrer  String?
+  sessionId String?
+  visitorId String?
+  ipHash    String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([type, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
 }

@@ -1,6 +1,7 @@
 import type { LeadKind, LeadRequest, LeadStatus, Prisma } from "@prisma/client";
 import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { trackPlatformEvent } from "../platform/telemetry.service";
 
 export type CreateLeadInput = {
   tenantId: string;
@@ -38,6 +39,18 @@ export class RequestService {
         note: "Création de la demande",
       },
     });
+    void trackPlatformEvent({
+      tenantId: created.tenantId,
+      type: created.kind === "reservation" ? "booking_created" : "quote_request_created",
+      category: "business",
+      path: "/api",
+      metadata: {
+        leadId: created.id,
+        kind: created.kind,
+        status: created.status,
+        hasPricingResult: created.pricingResult != null,
+      },
+    });
     return created;
   }
 
@@ -45,6 +58,17 @@ export class RequestService {
     await prisma.leadRequest.updateMany({
       where: { id: leadId, tenantId },
       data: ok ? { emailSentAt: new Date(), emailError: null } : { emailError: error?.slice(0, 1000) || "Erreur e-mail" },
+    });
+    void trackPlatformEvent({
+      tenantId,
+      type: ok ? "email_sent" : "email_failed",
+      category: "email",
+      path: "/api",
+      metadata: {
+        leadId,
+        ok,
+        ...(ok ? {} : { error: (error ?? "Erreur e-mail").slice(0, 200) }),
+      },
     });
   }
 

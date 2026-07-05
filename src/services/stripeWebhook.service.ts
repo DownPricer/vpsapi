@@ -6,6 +6,7 @@ import { prisma } from "../db/prisma";
 import { notifyPaymentConfirmedAfterWebhookTransition } from "../modules/email/paymentConfirmationMail";
 import { fetchStripeReceiptUrlForPaymentIntent } from "./stripe/stripeReceiptUrl";
 import { getStripeClient } from "./stripe/stripeClient";
+import { trackPlatformEvent } from "../platform/telemetry.service";
 
 /** Formes minimales des objets Stripe (évite les types du constructeur exporté par défaut). */
 type StripeMetadata = Record<string, string> | null | undefined;
@@ -120,6 +121,19 @@ async function markPaymentPaid(params: {
   await prisma.leadRequest.updateMany({
     where: { id: params.leadRequestId, tenantId: params.tenantId },
     data: { paymentStatus: LeadPaymentStatus.PAID },
+  });
+
+  void trackPlatformEvent({
+    tenantId: params.tenantId,
+    type: "payment_succeeded",
+    category: "stripe",
+    path: "/api/stripe/webhook",
+    metadata: {
+      paymentId: params.paymentId,
+      leadRequestId: params.leadRequestId,
+      amountCents: params.amountTotal ?? undefined,
+      currency: params.currency ?? undefined,
+    },
   });
 
   return true;
@@ -271,6 +285,18 @@ async function handlePaymentIntentFailed(pi: PaymentIntentLike): Promise<void> {
   await prisma.leadRequest.updateMany({
     where: { id: payment.leadRequestId, tenantId: payment.tenantId },
     data: { paymentStatus: LeadPaymentStatus.FAILED },
+  });
+
+  void trackPlatformEvent({
+    tenantId: payment.tenantId,
+    type: "payment_failed",
+    category: "stripe",
+    path: "/api/stripe/webhook",
+    metadata: {
+      paymentId: payment.id,
+      leadRequestId: payment.leadRequestId,
+      paymentIntentId: pi.id,
+    },
   });
 }
 

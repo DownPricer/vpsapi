@@ -14,6 +14,14 @@ function optionalInt(name: string, value: string | undefined, fallback: number):
   return n;
 }
 
+function optionalBool(value: string | undefined, fallback: boolean): boolean {
+  if (value === undefined || value === "") return fallback;
+  const v = value.trim().toLowerCase();
+  if (v === "1" || v === "true" || v === "yes" || v === "on") return true;
+  if (v === "0" || v === "false" || v === "no" || v === "off") return false;
+  return fallback;
+}
+
 export interface AppEnv {
   nodeEnv: string;
   port: number;
@@ -25,6 +33,9 @@ export interface AppEnv {
   accessTokenTtlSec: number;
   refreshTokenTtlSec: number;
   dashboardBaseUrl: string;
+  platformAdminEnabled: boolean;
+  platformSessionSecret: string;
+  telemetryEnabled: boolean;
 }
 
 export function loadEnv(): AppEnv {
@@ -50,6 +61,9 @@ export function loadEnv(): AppEnv {
       60 * 60 * 24 * 14
     ),
     dashboardBaseUrl: process.env.DASHBOARD_BASE_URL?.trim() || "https://app.sitereadyshd.fr",
+    platformAdminEnabled: optionalBool(process.env.PLATFORM_ADMIN_ENABLED, false),
+    platformSessionSecret: process.env.PLATFORM_SESSION_SECRET?.trim() || "",
+    telemetryEnabled: optionalBool(process.env.TELEMETRY_ENABLED, false),
   };
 }
 

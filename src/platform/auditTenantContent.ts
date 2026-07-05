@@ -1,0 +1,136 @@
+function str(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t.length > 0 ? t : null;
+}
+
+function walkStrings(value: unknown, path: string, out: Array<{ path: string; value: string }>, depth = 0): void {
+  if (depth > 6) return;
+  if (typeof value === "string") {
+    out.push({ path, value });
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < Math.min(30, value.length); i += 1) {
+      walkStrings(value[i], `${path}[${i}]`, out, depth + 1);
+    }
+    return;
+  }
+  const o = value as Record<string, unknown>;
+  for (const [k, v] of Object.entries(o)) {
+    walkStrings(v, path ? `${path}.${k}` : k, out, depth + 1);
+  }
+}
+
+const CORRUPTED_PATTERNS: Array<{ id: string; re: RegExp }> = [
+  { id: "replacement_char", re: /�/g },
+  { id: "utf8_mojibake_ae", re: /Ã©/g },
+  { id: "utf8_mojibake_egrave", re: /Ã¨/g },
+  { id: "utf8_mojibake_ecirc", re: /Ãª/g },
+  { id: "utf8_mojibake_generic", re: /Ã[a-zA-Z]/g },
+  { id: "question_mark_word", re: /\b\w+\?\w+\b/g },
+];
+
+const PLACEHOLDER_PATTERNS: Array<{ id: string; re: RegExp }> = [
+  { id: "exemple", re: /\bExemple\b/i },
+  { id: "adresse_a_completer", re: /Adresse à compléter/i },
+  { id: "cp_ville", re: /\b00000\b/i },
+  { id: "ville_exemple", re: /Ville exemple/i },
+  { id: "nouveau_vehicule", re: /Nouveau véhicule/i },
+  { id: "test_domain", re: /test-vtc\.example\.com/i },
+  { id: "jean_test", re: /Jean Test/i },
+];
+
+export type TenantAuditResult = {
+  corruptedTextFieldsCount: number;
+  corruptedSamples: Array<{ path: string; sample: string; pattern: string }>;
+  placeholderFieldsCount: number;
+  placeholderSamples: Array<{ path: string; sample: string; pattern: string }>;
+  missingRequiredFields: string[];
+  warnings: string[];
+  readinessScore: number;
+};
+
+export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
+  const strings: Array<{ path: string; value: string }> = [];
+  walkStrings(tenantSettings, "", strings);
+
+  const corruptedSamples: TenantAuditResult["corruptedSamples"] = [];
+  const placeholderSamples: TenantAuditResult["placeholderSamples"] = [];
+
+  let corruptedCount = 0;
+  let placeholderCount = 0;
+
+  for (const s of strings) {
+    for (const p of CORRUPTED_PATTERNS) {
+      if (p.re.test(s.value)) {
+        corruptedCount += 1;
+        if (corruptedSamples.length < 20) {
+          corruptedSamples.push({ path: s.path, sample: s.value.slice(0, 140), pattern: p.id });
+        }
+        break;
+      }
+    }
+    for (const p of PLACEHOLDER_PATTERNS) {
+      if (p.re.test(s.value)) {
+        placeholderCount += 1;
+        if (placeholderSamples.length < 20) {
+          placeholderSamples.push({ path: s.path, sample: s.value.slice(0, 140), pattern: p.id });
+        }
+        break;
+      }
+    }
+  }
+
+  const required: Array<{ key: string; label: string }> = [
+    { key: "branding.name", label: "branding.name (nom commercial)" },
+    { key: "branding.siteUrl", label: "branding.siteUrl (URL publique)" },
+    { key: "contact.email", label: "contact.email" },
+    { key: "contact.phone", label: "contact.phone" },
+  ];
+
+  const missingRequiredFields: string[] = [];
+  if (tenantSettings && typeof tenantSettings === "object" && !Array.isArray(tenantSettings)) {
+    const root = tenantSettings as Record<string, unknown>;
+    const branding = (root.branding && typeof root.branding === "object" && !Array.isArray(root.branding)) ? (root.branding as Record<string, unknown>) : null;
+    const contact = (root.contact && typeof root.contact === "object" && !Array.isArray(root.contact)) ? (root.contact as Record<string, unknown>) : null;
+
+    const get = (key: string): string | null => {
+      if (key === "branding.name") return str(branding?.name);
+      if (key === "branding.siteUrl") return str(branding?.siteUrl);
+      if (key === "contact.email") return str(contact?.email);
+      if (key === "contact.phone") return str(contact?.phone);
+      return null;
+    };
+
+    for (const r of required) {
+      if (!get(r.key)) missingRequiredFields.push(r.label);
+    }
+  } else {
+    missingRequiredFields.push(...required.map((r) => r.label));
+  }
+
+  const warnings: string[] = [];
+  if (corruptedCount > 0) warnings.push("Textes potentiellement corrompus (encodage) détectés.");
+  if (placeholderCount > 0) warnings.push("Textes de template/placeholder détectés.");
+  if (missingRequiredFields.length > 0) warnings.push("Champs requis manquants.");
+
+  // Score V1 : pénalités simples (extensible).
+  let score = 100;
+  score -= Math.min(40, corruptedCount * 5);
+  score -= Math.min(30, placeholderCount * 3);
+  score -= Math.min(40, missingRequiredFields.length * 10);
+  if (score < 0) score = 0;
+
+  return {
+    corruptedTextFieldsCount: corruptedCount,
+    corruptedSamples,
+    placeholderFieldsCount: placeholderCount,
+    placeholderSamples,
+    missingRequiredFields,
+    warnings,
+    readinessScore: score,
+  };
+}
+
