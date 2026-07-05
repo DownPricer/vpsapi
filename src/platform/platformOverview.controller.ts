@@ -1,8 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
+import { loadEnv } from "../config/env";
 
 export async function getPlatformHealth(_req: Request, res: Response): Promise<void> {
+  const env = loadEnv();
   // health "safe" : pas d’expo de secrets
   res.status(200).json({
     success: true,
@@ -10,6 +12,10 @@ export async function getPlatformHealth(_req: Request, res: Response): Promise<v
       ok: true,
       service: "vtc-core-api",
       time: new Date().toISOString(),
+      features: {
+        platformAdminEnabled: env.platformAdminEnabled,
+        telemetryEnabled: env.telemetryEnabled,
+      },
     },
   });
 }

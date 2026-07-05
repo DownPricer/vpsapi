@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { auditTenantContent } from "./auditTenantContent";
+import { computeSitePlan } from "./sitePlan";
 
 function safeString(v: unknown, max = 200): string | null {
   if (typeof v !== "string") return null;
@@ -35,10 +36,30 @@ function pickSettingsIdentity(settings: unknown): {
   return { commercialName, companyName, email, phone, city, siteUrl, adminUrl };
 }
 
+function detectPricingSuspect(settings: unknown): boolean {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
+  const s = settings as any;
+  const pricing = s?.pricing ?? s?.tarifs ?? s?.pricingConfig ?? null;
+  if (!pricing || typeof pricing !== "object") return false;
+  const n = (v: any) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const base = n(pricing?.baseVtc ?? pricing?.base ?? pricing?.basePrice);
+  const km = n(pricing?.pricePerKm ?? pricing?.prixKm ?? pricing?.prixParKm);
+  const min = n(pricing?.minimum ?? pricing?.min ?? pricing?.minimumPrice);
+  const approach = n(pricing?.approach ?? pricing?.approche);
+  const mult = n(pricing?.outOfZoneMultiplier ?? pricing?.multiplicateurHorsZone);
+  if (base !== null && base <= 0) return true;
+  if (km !== null && km <= 0) return true;
+  if (min !== null && min <= 0) return true;
+  if (approach !== null && approach <= 0) return true;
+  if (mult !== null && mult < 1) return true;
+  return false;
+}
+
 export async function getPlatformSites(req: Request, res: Response, next: NextFunction): Promise<void> {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const range = parseRangeKey(req.query.range, "30d");
   const { from, to } = rangeToDates(range);
+  const statusFilter = typeof req.query.status === "string" ? req.query.status.trim().toLowerCase() : "";
 
   try {
     const tenants = await prisma.tenant.findMany({
@@ -86,6 +107,53 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
       _sum: { amount: true },
     });
 
+    // Agrégations events (range) par tenant/type (pour statut + actions)
+    const eventRows = await prisma.$queryRaw<Array<{ tenantId: string; type: string; cnt: bigint }>>`
+      SELECT "tenantId" as "tenantId", "type" as "type", count(*)::bigint as cnt
+      FROM "PlatformEvent"
+      WHERE "tenantId" IS NOT NULL
+        AND "createdAt" >= ${from ?? new Date(0)} AND "createdAt" <= ${to}
+      GROUP BY 1, 2
+    `;
+    const eventMap = new Map<string, Record<string, number>>();
+    for (const r of eventRows) {
+      const m = eventMap.get(r.tenantId) ?? {};
+      m[r.type] = (m[r.type] ?? 0) + Number(r.cnt);
+      eventMap.set(r.tenantId, m);
+    }
+
+    const emailFailedLeadsAgg = await prisma.leadRequest.groupBy({
+      by: ["tenantId"],
+      where: {
+        ...(from ? { createdAt: { gte: from, lte: to } } : {}),
+        emailError: { not: null },
+      },
+      _count: { _all: true },
+    });
+    const emailFailedLeadsMap = new Map<string, number>(emailFailedLeadsAgg.map((r) => [r.tenantId, r._count._all]));
+
+    const lastEventAgg = await prisma.platformEvent.groupBy({
+      by: ["tenantId"],
+      where: { tenantId: { not: null } },
+      _max: { createdAt: true },
+    });
+    const lastLeadAgg = await prisma.leadRequest.groupBy({ by: ["tenantId"], _max: { createdAt: true } });
+    const lastPayAgg = await prisma.payment.groupBy({ by: ["tenantId"], _max: { paidAt: true, createdAt: true } });
+    const lastEventMap = new Map<string, Date>(
+      lastEventAgg
+        .filter((r) => r.tenantId && r._max.createdAt)
+        .map((r) => [r.tenantId as string, r._max.createdAt as Date])
+    );
+    const lastLeadMap = new Map<string, Date>(
+      lastLeadAgg.filter((r) => r._max.createdAt).map((r) => [r.tenantId, r._max.createdAt as Date])
+    );
+    const lastPayMap = new Map<string, Date>(
+      lastPayAgg.map((r) => [
+        r.tenantId,
+        ((r._max.paidAt as Date) ?? (r._max.createdAt as Date)) as Date,
+      ])
+    );
+
     const leadInRangeMap = new Map<string, number>(leadAgg.map((r) => [r.tenantId, r._count._all]));
     const leadTotalMap = new Map<string, number>(leadTotalAgg.map((r) => [r.tenantId, r._count._all]));
     const paidAllMap = new Map<string, number>(payPaidAll.map((r) => [r.tenantId, r._sum.amount ?? 0]));
@@ -105,11 +173,52 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
     const rows = tenants
       .map((t) => {
         const ident = pickSettingsIdentity(t.settings);
+        const audit = auditTenantContent(t.settings);
+        const stripeConnected = Boolean(t.stripeAccountId);
+        const stripeOk = stripeConnected && t.stripeChargesEnabled && t.stripeDetailsSubmitted;
+        const evCounts = eventMap.get(t.id) ?? {};
+        const errorsCount = (evCounts.api_error ?? 0) + (evCounts.admin_error ?? 0);
+        const calculatorFailedCount = evCounts.calculator_quote_failed ?? 0;
+        const emailFailedCount = (evCounts.email_failed ?? 0) + (emailFailedLeadsMap.get(t.id) ?? 0);
+        const paymentFailedCount = (evCounts.payment_failed ?? 0) + (payMap.get(t.id)?.failed ?? 0);
+        const paymentPaidCount = payMap.get(t.id)?.paid ?? 0;
+        const pricingSuspect = detectPricingSuspect(t.settings);
+
+        const candidates: Date[] = [];
+        const le = lastEventMap.get(t.id);
+        const ll = lastLeadMap.get(t.id);
+        const lp = lastPayMap.get(t.id);
+        if (le) candidates.push(le);
+        if (ll) candidates.push(ll);
+        if (lp) candidates.push(lp);
+        const lastActivityAt = candidates.length > 0 ? new Date(Math.max(...candidates.map((d) => d.getTime()))) : t.updatedAt;
+
+        const plan = computeSitePlan({
+          tenantId: t.id,
+          active: t.active,
+          settingsPresent: t.settings != null,
+          stripeConnected,
+          stripeOk,
+          audit,
+          lastActivityAt,
+          eventCounts: evCounts,
+          emailFailedCount,
+          paymentFailedCount,
+          paymentPaidCount,
+          calculatorFailedCount,
+          errorsCount,
+          pricingSuspect,
+        });
+
+        const alerts: Array<{ severity: "critique" | "warning" | "info"; label: string }> = [];
+        for (const act of plan.actions.filter((x) => x.statut === "a_faire").slice(0, 3)) {
+          alerts.push({ severity: act.gravite === "critique" ? "critique" : act.gravite === "warning" ? "warning" : "info", label: act.action });
+        }
+
         const inRange = leadInRangeMap.get(t.id) ?? 0;
         const total = leadTotalMap.get(t.id) ?? 0;
         const pay = payMap.get(t.id) ?? { paid: 0, failed: 0, amountPaidCents: 0 };
         const amountPaidTotalCents = paidAllMap.get(t.id) ?? 0;
-        const lastActivityAt = t.updatedAt;
         return {
           tenantId: t.id,
           name: ident.commercialName ?? t.name,
@@ -122,6 +231,27 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
           updatedAt: t.updatedAt,
           siteUrl: ident.siteUrl ?? null,
           adminUrl: ident.adminUrl ?? null,
+          status: {
+            // legacy (compat UI V2 précédente)
+            global: plan.legacyStatus,
+            // V2 premium
+            globalFine: plan.fineStatus,
+            globalLabel: plan.fineLabel,
+            priority: plan.priority,
+            riskScore: plan.riskScore,
+            readinessScore: audit.readinessScore,
+            accentsOk: audit.corruptedTextFieldsCount === 0,
+            contentOk: audit.readinessScore >= 85,
+            stripeConnected,
+            stripeOk,
+            daysSinceActivity: plan.daysSinceActivity,
+            reasons: plan.reasons,
+            nextAction: plan.nextAction,
+          },
+          plan: {
+            actions: plan.actions,
+          },
+          alerts,
           stripe: {
             accountIdPresent: Boolean(t.stripeAccountId),
             onboardingStatus: t.stripeOnboardingStatus,
@@ -155,6 +285,21 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
           (r.phone ?? "").toLowerCase().includes(needle) ||
           (r.siteUrl ?? "").toLowerCase().includes(needle)
         );
+      })
+      .filter((r) => {
+        if (!statusFilter) return true;
+        const fine = (r as any).status?.globalFine;
+        const legacy = (r as any).status?.global;
+        if (statusFilter === "ok") return fine === "ok" || legacy === "ok";
+        if (statusFilter === "a_configurer" || statusFilter === "configurer") return fine === "a_configurer";
+        if (statusFilter === "incomplet") return fine === "incomplet";
+        if (statusFilter === "risque") return fine === "risque";
+        if (statusFilter === "warning") return legacy === "warning";
+        if (statusFilter === "erreur" || statusFilter === "error") return fine === "erreur" || legacy === "erreur";
+        if (statusFilter === "inactif" || statusFilter === "inactive") return legacy === "inactif";
+        if (statusFilter === "stripe") return (r as any).status?.stripeConnected === false;
+        if (statusFilter === "contenu") return (r as any).status?.contentOk === false;
+        return true;
       });
 
     res.status(200).json({ success: true, data: { range, count: rows.length, sites: rows } });
@@ -299,6 +444,8 @@ export async function getPlatformSiteMetrics(req: Request, res: Response, next: 
 export async function getPlatformSiteEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
   const tenantId = String(req.params.tenantId ?? "").trim();
   const type = typeof req.query.type === "string" ? req.query.type.trim() : "";
+  const range = parseRangeKey(req.query.range, "30d");
+  const { from, to } = rangeToDates(range);
   const takeRaw = typeof req.query.take === "string" ? Number.parseInt(req.query.take, 10) : 200;
   const take = Number.isFinite(takeRaw) ? Math.max(1, Math.min(500, takeRaw)) : 200;
   if (!tenantId) {
@@ -310,11 +457,12 @@ export async function getPlatformSiteEvents(req: Request, res: Response, next: N
       where: {
         tenantId,
         ...(type ? { type } : {}),
+        ...(from ? { createdAt: { gte: from, lte: to } } : {}),
       },
       orderBy: { createdAt: "desc" },
       take,
     });
-    res.status(200).json({ success: true, data: { tenantId, count: events.length, events } });
+    res.status(200).json({ success: true, data: { tenantId, range, count: events.length, events } });
   } catch (e) {
     next(e);
   }
@@ -323,6 +471,8 @@ export async function getPlatformSiteEvents(req: Request, res: Response, next: N
 export async function getPlatformEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
   const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId.trim() : "";
   const type = typeof req.query.type === "string" ? req.query.type.trim() : "";
+  const range = parseRangeKey(req.query.range, "30d");
+  const { from, to } = rangeToDates(range);
   const takeRaw = typeof req.query.take === "string" ? Number.parseInt(req.query.take, 10) : 200;
   const take = Number.isFinite(takeRaw) ? Math.max(1, Math.min(500, takeRaw)) : 200;
   try {
@@ -330,11 +480,12 @@ export async function getPlatformEvents(req: Request, res: Response, next: NextF
       where: {
         ...(tenantId ? { tenantId } : {}),
         ...(type ? { type } : {}),
+        ...(from ? { createdAt: { gte: from, lte: to } } : {}),
       },
       orderBy: { createdAt: "desc" },
       take,
     });
-    res.status(200).json({ success: true, data: { count: events.length, events } });
+    res.status(200).json({ success: true, data: { range, count: events.length, events } });
   } catch (e) {
     next(e);
   }

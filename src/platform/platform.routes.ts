@@ -3,6 +3,9 @@ import { platformAuthRoutes } from "./platformAuth.routes";
 import { getPlatformAdminMe } from "./platformAuth.controller";
 import { requirePlatformAdmin } from "./requirePlatformAdmin";
 import { getPlatformHealth, getPlatformOverview } from "./platformOverview.controller";
+import { getPlatformAlerts } from "./platformAlerts.controller";
+import { getPlatformOverviewCharts, getPlatformSiteCharts } from "./platformCharts.controller";
+import { getPlatformSitePlan } from "./platformPlan.controller";
 import {
   getPlatformEvents,
   getPlatformSiteByTenantId,
@@ -28,6 +31,14 @@ export function createPlatformRouter(): Router {
     void getPlatformOverview(req, res, next);
   });
 
+  router.get("/overview/charts", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformOverviewCharts(req, res, next);
+  });
+
+  router.get("/alerts", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformAlerts(req, res, next);
+  });
+
   router.get("/sites", requirePlatformAdmin, (req, res, next) => {
     void getPlatformSites(req, res, next);
   });
@@ -38,6 +49,14 @@ export function createPlatformRouter(): Router {
 
   router.get("/sites/:tenantId/metrics", requirePlatformAdmin, (req, res, next) => {
     void getPlatformSiteMetrics(req, res, next);
+  });
+
+  router.get("/sites/:tenantId/charts", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformSiteCharts(req, res, next);
+  });
+
+  router.get("/sites/:tenantId/plan", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformSitePlan(req, res, next);
   });
 
   router.get("/sites/:tenantId/audit", requirePlatformAdmin, (req, res, next) => {

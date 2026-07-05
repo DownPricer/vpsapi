@@ -50,6 +50,18 @@ export type TenantAuditResult = {
   missingRequiredFields: string[];
   warnings: string[];
   readinessScore: number;
+  checks: Array<{
+    id: string;
+    label: string;
+    status: "ok" | "warning" | "ko";
+    severity: "info" | "warning" | "critique";
+    message?: string;
+  }>;
+  issues: Array<{
+    severity: "info" | "warning" | "critique";
+    title: string;
+    message: string;
+  }>;
 };
 
 export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
@@ -116,6 +128,54 @@ export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
   if (placeholderCount > 0) warnings.push("Textes de template/placeholder détectés.");
   if (missingRequiredFields.length > 0) warnings.push("Champs requis manquants.");
 
+  const checks: TenantAuditResult["checks"] = [];
+  const issues: TenantAuditResult["issues"] = [];
+
+  // Checks “dirigeant” (V2)
+  checks.push({
+    id: "identity_required",
+    label: "Identité (nom, email, téléphone, URL)",
+    status: missingRequiredFields.length === 0 ? "ok" : "ko",
+    severity: missingRequiredFields.length === 0 ? "info" : "critique",
+    ...(missingRequiredFields.length > 0 ? { message: `Champs manquants: ${missingRequiredFields.slice(0, 3).join(", ")}${missingRequiredFields.length > 3 ? "…" : ""}` } : {}),
+  });
+  checks.push({
+    id: "encoding",
+    label: "Accents / encodage",
+    status: corruptedCount === 0 ? "ok" : "warning",
+    severity: corruptedCount === 0 ? "info" : "warning",
+    ...(corruptedCount > 0 ? { message: `${corruptedCount} champ(s) suspect(s)` } : {}),
+  });
+  checks.push({
+    id: "placeholders",
+    label: "Texte template (Exemple, adresse à compléter…)",
+    status: placeholderCount === 0 ? "ok" : "warning",
+    severity: placeholderCount === 0 ? "info" : "warning",
+    ...(placeholderCount > 0 ? { message: `${placeholderCount} occurrence(s)` } : {}),
+  });
+
+  if (missingRequiredFields.length > 0) {
+    issues.push({
+      severity: "critique",
+      title: "Champs requis manquants",
+      message: missingRequiredFields.slice(0, 6).join(" · ") + (missingRequiredFields.length > 6 ? " …" : ""),
+    });
+  }
+  if (placeholderCount > 0) {
+    issues.push({
+      severity: "warning",
+      title: "Textes de template détectés",
+      message: placeholderSamples.slice(0, 3).map((s) => `${s.path}: ${s.sample}`).join(" · "),
+    });
+  }
+  if (corruptedCount > 0) {
+    issues.push({
+      severity: "warning",
+      title: "Accents/encodage suspects",
+      message: corruptedSamples.slice(0, 3).map((s) => `${s.path}: ${s.sample}`).join(" · "),
+    });
+  }
+
   // Score V1 : pénalités simples (extensible).
   let score = 100;
   score -= Math.min(40, corruptedCount * 5);
@@ -131,6 +191,8 @@ export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
     missingRequiredFields,
     warnings,
     readinessScore: score,
+    checks,
+    issues,
   };
 }
 
