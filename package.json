@@ -19,6 +19,7 @@
     "verify:classic-base-segments": "tsx src/scripts/verifyClassicBaseSegments.ts",
     "verify:tenant-vs-pricing-config": "tsx src/scripts/verifyTenantEnginePricingConfigParity.ts",
     "verify:pricing-config": "tsx src/scripts/verifyPricingConfig.ts",
+    "audit:utf8": "tsx src/scripts/auditUtf8.ts",
     "platform:fix-default-domain": "tsx src/scripts/fixDefaultDomain.ts"
   },
   "engines": {

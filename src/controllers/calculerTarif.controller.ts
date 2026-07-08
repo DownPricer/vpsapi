@@ -26,8 +26,36 @@ export async function postCalculerTarif(
     const { serialized, pricingDebug, pricingConfigSource, pricingConfigVersion } = await pricingService.computeTariffForRequest(
       req.tenant,
       parsed.data,
-      { includeDebug }
+      {
+        includeDebug,
+        usageContext: {
+          tenantId: req.tenantId,
+          observedDomain: req.tenantResolution?.observedDomain ?? null,
+          origin: req.tenantResolution?.origin ?? null,
+          path: "/api/calculer-tarif",
+        },
+      }
     );
+    void trackFromRequest({
+      tenantId: req.tenantId,
+      observedDomain: req.tenantResolution?.observedDomain ?? null,
+      origin: req.tenantResolution?.origin ?? null,
+      type: "api_usage_route_calculation",
+      category: "api_usage",
+      reqIp: req.ip,
+      forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+      userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+      path: "/api/calculer-tarif",
+      referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
+      metadata: {
+        provider: "internal",
+        endpoint: "calculer-tarif",
+        success: true,
+        serviceType: resolveServiceTypeKey(parsed.data) ?? "unknown",
+        tenantResolution: req.tenantResolution?.source,
+        matchedDomain: req.tenantResolution?.matchedDomain,
+      },
+    });
     void trackFromRequest({
       tenantId: req.tenantId,
       observedDomain: req.tenantResolution?.observedDomain ?? null,
@@ -76,6 +104,28 @@ export async function postCalculerTarif(
         metadata: {
           serviceType: resolveServiceTypeKey(parsed.data) ?? "unknown",
           reason: e.message,
+          tenantResolution: req.tenantResolution?.source,
+          matchedDomain: req.tenantResolution?.matchedDomain,
+        },
+      });
+      void trackFromRequest({
+        tenantId: req.tenantId,
+        observedDomain: req.tenantResolution?.observedDomain ?? null,
+        origin: req.tenantResolution?.origin ?? null,
+        type: "api_usage_route_calculation",
+        category: "api_usage",
+        reqIp: req.ip,
+        forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+        userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+        path: "/api/calculer-tarif",
+        referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
+        metadata: {
+          provider: "internal",
+          endpoint: "calculer-tarif",
+          success: false,
+          status: 400,
+          serviceType: resolveServiceTypeKey(parsed.data) ?? "unknown",
+          error: e.message.slice(0, 160),
           tenantResolution: req.tenantResolution?.source,
           matchedDomain: req.tenantResolution?.matchedDomain,
         },

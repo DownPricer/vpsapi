@@ -1,5 +1,6 @@
 import { requireDistanceMatrixKey } from "../config/env";
 import type { TenantConfig } from "../types/tenant";
+import type { DistanceUsageContext } from "../modules/distance/distanceMatrix";
 import {
   calculerDistances,
   calculerTarif,
@@ -32,7 +33,7 @@ export function resolveServiceTypeKey(body: Record<string, unknown>): ServiceTyp
 export async function runPricingPipeline(
   tenant: TenantConfig,
   body: Record<string, unknown>,
-  opts?: { includeDebug?: boolean }
+  opts?: { includeDebug?: boolean; usageContext?: DistanceUsageContext }
 ): Promise<{
   typeKey: ServiceTypeKey;
   distances: Distances;
@@ -50,7 +51,7 @@ export async function runPricingPipeline(
   }
   const resolvedPricing = resolvePricingEngineForRequest(tenant, body);
   const engine = resolvedPricing.engine;
-  const distances = await calculerDistances(apiKey, body, engine);
+  const distances = await calculerDistances(apiKey, body, engine, opts?.usageContext);
   const result = await calculerTarif(typeKey, body, distances, engine);
   let pricingDebug: PricingDebugBreakdown | undefined;
   if (opts?.includeDebug) {
@@ -82,7 +83,7 @@ export class PricingService {
   async computeTariffForRequest(
     tenant: TenantConfig,
     body: Record<string, unknown>,
-    opts?: { includeDebug?: boolean }
+    opts?: { includeDebug?: boolean; usageContext?: DistanceUsageContext }
   ): Promise<{
     serialized: Record<string, unknown>;
     pricingDebug?: PricingDebugBreakdown;

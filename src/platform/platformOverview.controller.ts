@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { loadEnv } from "../config/env";
+import { getPlatformUsageSummary } from "./apiUsage";
 
 export async function getPlatformHealth(_req: Request, res: Response): Promise<void> {
   const env = loadEnv();
@@ -34,6 +35,7 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
       paymentsPaidInRange,
       paymentsFailedInRange,
       eventsInRange,
+      usage,
     ] = await Promise.all([
       prisma.tenant.count(),
       prisma.tenant.count({ where: { active: true } }),
@@ -55,6 +57,7 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
       prisma.platformEvent.count({
         where: from ? { createdAt: { gte: from, lte: to } } : {},
       }),
+      getPlatformUsageSummary(range),
     ]);
 
     const revenuePaidTotalAgg = await prisma.payment.aggregate({
@@ -94,10 +97,11 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
         telemetry: {
           eventsInRange,
         },
+        usage,
         notes: {
           visitors: "non_disponible_v1",
           mailStats: "partiel (LeadRequest.emailSentAt/emailError + events si activés)",
-          pricingCalculations: "non_disponible_v1 (prévu via PlatformEvent)",
+          pricingCalculations: "disponible via PlatformEvent calculator_quote_* et api_usage_*",
         },
       },
     });

@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { getDistancesWithFallback } from "../distance/distanceMatrix";
+import { getDistancesWithFallback, type DistanceUsageContext } from "../distance/distanceMatrix";
 import { calculerCreneaux, isFerie } from "./creneaux";
 import type { TenantPricingEngineConfig } from "./engineTypes";
 import { getPrimaryServiceZoneCommunes } from "./zoneSets/registry";
@@ -222,7 +222,8 @@ export function buildGcalUrl(
 export async function calculerDistances(
   apiKey: string,
   payload: Record<string, unknown>,
-  engine: TenantPricingEngineConfig
+  engine: TenantPricingEngineConfig,
+  usageContext?: DistanceUsageContext
 ): Promise<Distances> {
   const tsNorm = normalizeTypeService((payload?.general as Record<string, unknown>)?.TypeService as string);
   const dist: Distances = {
@@ -272,7 +273,7 @@ export async function calculerDistances(
   const list = Array.from(addresses);
   if (list.length === 0) return dist;
 
-  const dm = await getDistancesWithFallback(apiKey, list, list);
+  const dm = await getDistancesWithFallback(apiKey, list, list, usageContext);
   const get = (o: string, d: string) =>
     dm[`${getFormattedAddress(o)}->${getFormattedAddress(d)}`] || {
       km: 0,

@@ -6,6 +6,7 @@ import { inferScheduleRange } from "../modules/leads/schedule";
 import { sendDevisLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
+import type { DistanceUsageContext } from "../modules/distance/distanceMatrix";
 import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
 import { parseClientWantsOnlinePayment } from "../modules/leads/parseClientWantsOnlinePayment";
 import { parseClientBlock } from "../validation/clientBlock";
@@ -41,7 +42,8 @@ export class QuoteService {
   async processDevis(
     tenant: TenantConfig,
     body: Record<string, unknown>,
-    includeDebug = false
+    includeDebug = false,
+    usageContext?: DistanceUsageContext
   ): Promise<DevisSuccess> {
     const clientParsed = parseClientBlock(body);
     if (!clientParsed.ok) {
@@ -50,6 +52,7 @@ export class QuoteService {
 
     const { result, distances, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, {
       includeDebug,
+      usageContext,
     });
     const rawPayloadForStorage = this.buildRawPayloadForStorage(body, {
       pricingConfigSource,

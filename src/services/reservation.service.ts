@@ -6,6 +6,7 @@ import { inferScheduleRange } from "../modules/leads/schedule";
 import { sendReservationLeadEmails } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
 import { runPricingPipeline } from "./pricing.service";
+import type { DistanceUsageContext } from "../modules/distance/distanceMatrix";
 import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
 import { parseClientWantsOnlinePayment } from "../modules/leads/parseClientWantsOnlinePayment";
 import { parseClientBlock } from "../validation/clientBlock";
@@ -40,14 +41,15 @@ export class ReservationService {
   async processReservation(
     tenant: TenantConfig,
     body: Record<string, unknown>,
-    includeDebug = false
+    includeDebug = false,
+    usageContext?: DistanceUsageContext
   ): Promise<ReservationSuccess> {
     const clientParsed = parseClientBlock(body);
     if (!clientParsed.ok) {
       throw new Error(clientParsed.message);
     }
 
-    const { result, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, { includeDebug });
+    const { result, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, { includeDebug, usageContext });
     const rawPayloadForStorage = this.buildRawPayloadForStorage(body, {
       pricingConfigSource,
       pricingConfigVersion,

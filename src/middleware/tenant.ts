@@ -10,9 +10,17 @@ export function tenantMiddleware(env: AppEnv) {
       const resolution = await resolveTenantFromRequest(req, {
         fallbackTenantId: env.defaultTenantId,
         allowPendingCreate: true,
+        allowHeaderForPendingDomain: req.path === "/auth/login",
         metadata: req.body?.metadata ?? req.body,
       });
       if (resolution.source === "pending_domain" && resolution.observedDomain) {
+        console.warn("[tenant] DOMAIN_PENDING", {
+          path: req.path,
+          origin: resolution.origin,
+          observedDomain: resolution.observedDomain,
+          matchedDomain: resolution.matchedDomain,
+          domainStatus: resolution.domainStatus,
+        });
         res.status(409).json({
           success: false,
           error: {

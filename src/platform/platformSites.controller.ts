@@ -4,6 +4,7 @@ import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { auditTenantContent } from "./auditTenantContent";
 import { computeSitePlan } from "./sitePlan";
 import { resolveTenantUrls } from "./resolveTenantUrls";
+import { getUsagePeriodsByTenant, getUsageSummariesByTenant } from "./apiUsage";
 
 function safeString(v: unknown, max = 200): string | null {
   if (typeof v !== "string") return null;
@@ -86,6 +87,9 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
         paymentMode: true,
       },
     });
+    const tenantIds = tenants.map((t) => t.id);
+    const usageInRangeMap = await getUsageSummariesByTenant(tenantIds, range);
+    const usagePeriodsMap = await getUsagePeriodsByTenant(tenantIds);
 
     const activeDomains = await prisma.tenantDomain.findMany({
       where: { status: "active", tenantId: { not: null } },
@@ -252,6 +256,8 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
         const total = leadTotalMap.get(t.id) ?? 0;
         const pay = payMap.get(t.id) ?? { paid: 0, failed: 0, amountPaidCents: 0 };
         const amountPaidTotalCents = paidAllMap.get(t.id) ?? 0;
+        const usage = usageInRangeMap.get(t.id) ?? null;
+        const usagePeriods = usagePeriodsMap.get(t.id) ?? null;
         return {
           tenantId: t.id,
           name: ident.commercialName ?? t.name,
@@ -307,6 +313,8 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
             amountPaidInRangeCents: pay.amountPaidCents,
             amountPaidTotalCents,
           },
+          usage,
+          usagePeriods,
           lastActivityAt,
         };
       })
@@ -384,6 +392,8 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
           stripe: { accountIdPresent: false, onboardingStatus: "NOT_STARTED", chargesEnabled: false, payoutsEnabled: false, detailsSubmitted: false },
           payment: { onlineEnabled: false, mode: "FULL" },
           metrics: { leadsTotal: 0, leadsInRange: 0, paymentsPaidInRange: 0, paymentsFailedInRange: 0, amountPaidInRangeCents: 0, amountPaidTotalCents: 0 },
+          usage: null,
+          usagePeriods: null,
           lastActivityAt: s?.lastAt ?? d.lastSeenAt,
         };
       })
@@ -446,6 +456,7 @@ export async function getPlatformSiteByTenantId(req: Request, res: Response, nex
       apiBaseUrl: "https://api.sitereadyshd.fr",
       domain: activeDomain?.domain ?? null,
     });
+    const usagePeriods = (await getUsagePeriodsByTenant([tenant.id])).get(tenant.id) ?? null;
     res.status(200).json({
       success: true,
       data: {
@@ -478,6 +489,7 @@ export async function getPlatformSiteByTenantId(req: Request, res: Response, nex
           currency: tenant.paymentCurrency,
           platformApplicationFeeAmount: tenant.platformApplicationFeeAmount,
         },
+        usagePeriods,
         settingsPresent: tenant.settings != null,
       },
     });
@@ -495,7 +507,7 @@ export async function getPlatformSiteMetrics(req: Request, res: Response, next: 
     return;
   }
   try {
-    const [leadsCount, paymentsPaidAgg, paymentsFailedCount, eventsCount] = await Promise.all([
+    const [leadsCount, paymentsPaidAgg, paymentsFailedCount, eventsCount, usageMap, usagePeriodsMap] = await Promise.all([
       prisma.leadRequest.count({
         where: {
           tenantId,
@@ -524,6 +536,8 @@ export async function getPlatformSiteMetrics(req: Request, res: Response, next: 
           ...(from ? { createdAt: { gte: from, lte: to } } : {}),
         },
       }),
+      getUsageSummariesByTenant([tenantId], range),
+      getUsagePeriodsByTenant([tenantId]),
     ]);
 
     res.status(200).json({
@@ -539,6 +553,8 @@ export async function getPlatformSiteMetrics(req: Request, res: Response, next: 
           platformFeesCents: paymentsPaidAgg._sum.applicationFeeAmount ?? 0,
         },
         telemetry: { eventsCount },
+        usage: usageMap.get(tenantId) ?? null,
+        usagePeriods: usagePeriodsMap.get(tenantId) ?? null,
       },
     });
   } catch (e) {

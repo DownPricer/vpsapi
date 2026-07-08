@@ -143,6 +143,7 @@ export type ResolveTenantFromRequestOptions = {
   metadata?: unknown;
   fallbackTenantId: string;
   allowPendingCreate?: boolean;
+  allowHeaderForPendingDomain?: boolean;
   telemetryMode?: boolean;
 };
 
@@ -160,6 +161,8 @@ export async function resolveTenantFromRequest(
   options: ResolveTenantFromRequestOptions
 ): Promise<TenantRequestResolution> {
   const { domain: observedDomain, origin } = extractObservedDomain(req, options.metadata);
+  const headerTenant = safeString(options.bodyTenantId ?? firstHeader(req, "x-tenant-id"), 80);
+  const headerTenantIsValid = Boolean(headerTenant && getTenantConfig(headerTenant));
 
   if (observedDomain && !isTechnicalDomain(observedDomain)) {
     const row = await findDomain(observedDomain);
@@ -169,6 +172,16 @@ export async function resolveTenantFromRequest(
         return {
           tenantId: row.tenantId,
           source: "domain_active",
+          observedDomain,
+          matchedDomain: row.domain,
+          domainStatus: row.status,
+          origin,
+        };
+      }
+      if (options.allowHeaderForPendingDomain && headerTenant && headerTenantIsValid) {
+        return {
+          tenantId: headerTenant,
+          source: "header",
           observedDomain,
           matchedDomain: row.domain,
           domainStatus: row.status,
@@ -187,6 +200,16 @@ export async function resolveTenantFromRequest(
 
     if (options.allowPendingCreate) {
       await observeUnknownDomain(observedDomain, "observed_origin");
+      if (options.allowHeaderForPendingDomain && headerTenant && headerTenantIsValid) {
+        return {
+          tenantId: headerTenant,
+          source: "header",
+          observedDomain,
+          matchedDomain: null,
+          domainStatus: "pending",
+          origin,
+        };
+      }
       return {
         tenantId: options.telemetryMode ? null : null,
         source: "pending_domain",
@@ -198,8 +221,7 @@ export async function resolveTenantFromRequest(
     }
   }
 
-  const headerTenant = safeString(options.bodyTenantId ?? firstHeader(req, "x-tenant-id"), 80);
-  if (headerTenant && getTenantConfig(headerTenant)) {
+  if (headerTenant && headerTenantIsValid) {
     return {
       tenantId: headerTenant,
       source: "header",

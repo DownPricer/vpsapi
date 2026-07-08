@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import crypto from "crypto";
 import { z } from "zod";
 import { loadEnv } from "../config/env";
 import { AuthService } from "../services/auth.service";
@@ -32,6 +33,17 @@ function clearRefreshCookie(res: Response): void {
   });
 }
 
+function hashEmailForLogs(email: string): string {
+  return crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex").slice(0, 16);
+}
+
+function maskEmail(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const [local, domain] = normalized.split("@");
+  if (!local || !domain) return "invalid-email";
+  return `${local.slice(0, 2)}***@${domain}`;
+}
+
 export async function postAuthLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = loginSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
@@ -43,6 +55,7 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
   }
 
   try {
+    const emailHash = hashEmailForLogs(parsed.data.email);
     const result = await authService.login({
       tenantId: req.tenantId,
       email: parsed.data.email,
@@ -62,9 +75,29 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
       referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
       metadata: { userId: result.user.id, role: result.user.role },
     });
+    console.info("[auth:pro] login success", {
+      tenantId: req.tenantId,
+      tenantResolution: req.tenantResolution?.source,
+      origin: req.tenantResolution?.origin,
+      observedDomain: req.tenantResolution?.observedDomain,
+      matchedDomain: req.tenantResolution?.matchedDomain,
+      domainStatus: req.tenantResolution?.domainStatus,
+      emailHash,
+    });
     res.json({ success: true, data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erreur login";
+    const emailHash = hashEmailForLogs(parsed.data.email);
+    console.warn("[auth:pro] login refused", {
+      tenantId: req.tenantId,
+      tenantResolution: req.tenantResolution?.source,
+      origin: req.tenantResolution?.origin,
+      observedDomain: req.tenantResolution?.observedDomain,
+      matchedDomain: req.tenantResolution?.matchedDomain,
+      domainStatus: req.tenantResolution?.domainStatus,
+      emailHash,
+      reason: message.slice(0, 120),
+    });
     void trackFromRequest({
       tenantId: req.tenantId,
       type: "pro_login_failed",
@@ -74,7 +107,7 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
       userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
       path: "/api/auth/login",
       referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
-      metadata: { email: parsed.data.email.toLowerCase(), reason: message.slice(0, 200) },
+      metadata: { emailHash, emailMasked: maskEmail(parsed.data.email), reason: message.slice(0, 200) },
     });
     res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message } });
   }

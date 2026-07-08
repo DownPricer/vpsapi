@@ -21,7 +21,12 @@ export async function postReservation(
 
   try {
     const includeDebug = isPricingDebugAuthorized(req);
-    const data = await reservationService.processReservation(req.tenant, parsed.data, includeDebug);
+    const data = await reservationService.processReservation(req.tenant, parsed.data, includeDebug, {
+      tenantId: req.tenantId,
+      observedDomain: req.tenantResolution?.observedDomain ?? null,
+      origin: req.tenantResolution?.origin ?? null,
+      path: "/api/reservation",
+    });
     const { pricingDebug, ...responseBody } = data;
     sendSuccess(res, responseBody, {
       tenantId: req.tenantId,

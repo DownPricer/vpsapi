@@ -17,7 +17,12 @@ export async function postDevis(req: Request, res: Response, next: NextFunction)
 
   try {
     const includeDebug = isPricingDebugAuthorized(req);
-    const data = await quoteService.processDevis(req.tenant, parsed.data, includeDebug);
+    const data = await quoteService.processDevis(req.tenant, parsed.data, includeDebug, {
+      tenantId: req.tenantId,
+      observedDomain: req.tenantResolution?.observedDomain ?? null,
+      origin: req.tenantResolution?.origin ?? null,
+      path: "/api/devis",
+    });
     const { pricingDebug, ...responseBody } = data;
     sendSuccess(res, responseBody, {
       tenantId: req.tenantId,

@@ -1,3 +1,5 @@
+import { stringLooksEncodingCorrupted } from "../utils/tenantSettingsEncoding";
+
 function str(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.trim();
@@ -30,6 +32,7 @@ const CORRUPTED_PATTERNS: Array<{ id: string; re: RegExp }> = [
   { id: "utf8_mojibake_egrave", re: /Ã¨/ },
   { id: "utf8_mojibake_ecirc", re: /Ãª/ },
   { id: "utf8_mojibake_generic", re: /Ã[a-zA-Z]/ },
+  { id: "accent_replaced_by_question_mark", re: /\p{L}\?\p{L}|\p{L}\?(?=\s|$)/u },
 ];
 
 const PLACEHOLDER_PATTERNS: Array<{ id: string; re: RegExp }> = [
@@ -76,7 +79,7 @@ export function auditTenantContent(tenantSettings: unknown): TenantAuditResult {
 
   for (const s of strings) {
     for (const p of CORRUPTED_PATTERNS) {
-      if (p.re.test(s.value)) {
+      if (p.re.test(s.value) || (p.id === "accent_replaced_by_question_mark" && stringLooksEncodingCorrupted(s.value))) {
         corruptedCount += 1;
         if (corruptedSamples.length < 20) {
           corruptedSamples.push({ path: s.path, sample: s.value.slice(0, 140), pattern: p.id });

@@ -361,6 +361,7 @@ export function renderAdminAppPage(): string {
     const safe = (s) => (s==null?'':String(s)).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
     const fmtCents = (n) => (Number(n||0)/100).toLocaleString('fr-FR', { style:'currency', currency:'EUR' });
     const fmtInt = (n) => Number(n||0).toLocaleString('fr-FR');
+    const fmtUsageCost = (usage) => usage && usage.estimatedCostCents !== null && usage.estimatedCostCents !== undefined ? fmtCents(usage.estimatedCostCents) : 'Non configuré';
     const fmtDateTime = (iso) => {
       try { return new Date(iso).toLocaleString('fr-FR'); } catch { return String(iso||''); }
     };
@@ -482,6 +483,8 @@ export function renderAdminAppPage(): string {
         ['CA payé (période)', fmtCents(ov.payments.amountPaidInRangeCents), 'Frais plateforme: '+fmtCents(ov.payments.platformFeesInRangeCents)],
         ['Paiements réussis', fmtInt(ov.payments.paidInRange), 'Échecs: '+fmtInt(ov.payments.failedInRange)],
         ['Événements', fmtInt(ov.telemetry.eventsInRange), 'Telemetry (si activée)'],
+        ['Calculs API', fmtInt(ov.usage?.calculations), 'Distance: '+fmtInt(ov.usage?.distanceCalls)+' · erreurs: '+fmtInt(ov.usage?.apiErrors)],
+        ['Coût API estimé', fmtUsageCost(ov.usage), ov.usage?.costConfigured ? 'période '+state.range : 'Volumes disponibles'],
         ['CA payé (total)', fmtCents(ov.payments.amountPaidTotalCents), ''],
         ['Paiements réussis (total)', fmtInt(ov.payments.paidTotal), ''],
       ];
@@ -589,7 +592,7 @@ export function renderAdminAppPage(): string {
       const rows = data.sites || [];
       $('sitesTable').innerHTML = rows.length === 0 ? '<div class="empty">Aucun site ne correspond aux filtres.</div>' :
         '<table class="table"><thead><tr>' +
-          '<th>Site</th><th>Domaine</th><th>Statut</th><th>Priorité</th><th>Prochaine action</th><th class="right">CA '+safe(data.range)+'</th><th class="right">Paiements</th><th class="right">Actions</th>' +
+          '<th>Site</th><th>Domaine</th><th>Statut</th><th>Priorité</th><th>Usage API '+safe(data.range)+'</th><th class="right">CA '+safe(data.range)+'</th><th class="right">Paiements</th><th class="right">Actions</th>' +
         '</tr></thead><tbody>' +
         rows.map(s => {
           const stFine = s.status.globalFine;
@@ -617,7 +620,7 @@ export function renderAdminAppPage(): string {
             '<td>'+dom+'<div class="muted">'+safe(s.email||'')+'</div></td>' +
             '<td>'+st+' ' + (s.status.stripeConnected ? badge('Stripe','ok') : badge('Stripe','bad')) + ' ' + (s.status.accentsOk ? badge('Accents','ok') : badge('Accents','warn')) + ' ' + badge('Prêt '+safe(String(s.status.readinessScore))+'%',''+(s.status.readinessScore>=85?'ok':s.status.readinessScore>=70?'warn':'bad')) + '</td>' +
             '<td>'+pr+'</td>' +
-            '<td class="muted">'+safe(s.status.nextAction || '—')+'</td>' +
+            '<td><div>Calculs '+fmtInt(s.usage?.calculations)+' · Distance '+fmtInt(s.usage?.distanceCalls)+'</div><div class="muted">Erreurs '+fmtInt(s.usage?.apiErrors)+' · coût '+safe(fmtUsageCost(s.usage))+'</div></td>' +
             '<td class="right">'+fmtCents(s.metrics.amountPaidInRangeCents)+'</td>' +
             '<td class="right">'+fmtInt(s.metrics.paymentsPaidInRange)+' <span class="muted">(échecs '+fmtInt(s.metrics.paymentsFailedInRange)+')</span></td>' +
             '<td class="right">'+acts+'</td>' +
@@ -732,8 +735,29 @@ export function renderAdminAppPage(): string {
         ['CA payé', fmtCents(metrics.payments.amountPaidCents), 'frais: '+fmtCents(metrics.payments.platformFeesCents)],
         ['Paiements OK', fmtInt(metrics.payments.paidCount), 'échecs: '+fmtInt(metrics.payments.failedCount)],
         ['Événements', fmtInt(metrics.telemetry.eventsCount), 'telemetry'],
+        ['Calculs API', fmtInt(metrics.usage?.calculations), 'réussis '+fmtInt(metrics.usage?.calculationSuccess)+' · échecs '+fmtInt(metrics.usage?.calculationFailed)],
+        ['Distance API', fmtInt(metrics.usage?.distanceCalls), 'coût estimé: '+fmtUsageCost(metrics.usage)],
       ];
       $('siteKpis').innerHTML = sk.map(([a,b,c]) => kpiCard(a,b,c)).join('');
+
+      const usagePeriods = site.usagePeriods || metrics.usagePeriods || {};
+      const usageRows = ['7d','30d','90d','all'].map(r => {
+        const u = usagePeriods[r] || {};
+        const label = r === '7d' ? '7 jours' : r === '30d' ? '30 jours' : r === '90d' ? '90 jours' : 'Total';
+        return '<tr>' +
+          '<td>'+label+'</td>' +
+          '<td class="right">'+fmtInt(u.calculations)+'</td>' +
+          '<td class="right">'+fmtInt(u.distanceCalls)+'</td>' +
+          '<td class="right">'+fmtInt(u.autocompleteCalls)+'</td>' +
+          '<td class="right">'+fmtInt(u.businessApiCalls)+'</td>' +
+          '<td class="right">'+fmtInt(u.apiErrors)+'</td>' +
+          '<td class="right">'+safe(fmtUsageCost(u))+'</td>' +
+        '</tr>';
+      }).join('');
+      const usageCard = '<div id="siteUsageBlock"><div class="sectionTitle">Utilisation API</div>' +
+        '<div class="card"><table class="table"><thead><tr><th>Période</th><th class="right">Calculs tarifaires</th><th class="right">Distance API</th><th class="right">Autocomplete</th><th class="right">API métier</th><th class="right">Erreurs</th><th class="right">Coût estimé</th></tr></thead><tbody>' +
+        usageRows +
+        '</tbody></table><div class="muted" style="margin-top:8px">Le coût reste “Non configuré” tant que les variables GOOGLE_*_COST_CENTS_PER_CALL ne sont pas renseignées.</div></div></div>';
 
       // Plan d’action
       if (plan) {
@@ -754,6 +778,9 @@ export function renderAdminAppPage(): string {
       } else {
         $('sitePlan').innerHTML = '<div class="empty">Plan d’action indisponible.</div>';
       }
+      const previousUsageBlock = $('siteUsageBlock');
+      if (previousUsageBlock) previousUsageBlock.remove();
+      $('sitePlan').insertAdjacentHTML('afterend', usageCard);
 
       // Audit visuel
       const checks = (a.checks||[]).map(c => {
