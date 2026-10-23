@@ -219,10 +219,20 @@ export class RequestService {
     const horizon = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [pendingCount, acceptedToday, upcomingReservationCount, recentDevisWeekCount, recent, stripePaymentsPendingCount] =
-      await Promise.all([
+    const [
+      pendingCount,
+      newCount,
+      acceptedToday,
+      upcomingReservationCount,
+      recentDevisWeekCount,
+      recent,
+      stripePaymentsPendingCount,
+    ] = await Promise.all([
         prisma.leadRequest.count({
           where: { tenantId, status: { in: ["pending", "new"] } },
+        }),
+        prisma.leadRequest.count({
+          where: { tenantId, status: "new" },
         }),
         prisma.leadRequest.count({
           where: {
@@ -262,6 +272,7 @@ export class RequestService {
 
     return {
       pendingCount,
+      newCount,
       acceptedToday,
       upcomingReservationCount,
       recentDevisWeekCount,
