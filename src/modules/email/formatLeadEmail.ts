@@ -7,17 +7,23 @@ const THEME = {
   headerBg: "#111827",
   accent: "#f97316",
   accentDark: "#ea580c",
+  accentSoft: "#fff4ec",
   text: "#172033",
   textSoft: "#475569",
   textMuted: "#64748b",
-  border: "#dbe3ec",
+  border: "#e2e8f0",
   success: "#15803d",
   successBg: "#ecfdf3",
+  successBorder: "#bbf7d0",
   danger: "#b91c1c",
   dangerBg: "#fef2f2",
+  dangerBorder: "#fecaca",
   warning: "#9a3412",
   warningBg: "#fff7ed",
+  warningBorder: "#fed7aa",
 } as const;
+
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 type SectionId = "meta" | "client" | "trip" | "pricing" | "comment";
 
@@ -30,6 +36,12 @@ type RowDef = {
   section: SectionId;
 };
 
+type Fact = { label: string; value: string; emphasis?: boolean };
+
+type Leg = { title: string; from: string; to: string; note?: string };
+
+type ButtonVariant = "primary" | "secondary";
+
 const SECTION_ORDER: SectionId[] = ["meta", "client", "trip", "pricing", "comment"];
 
 const SECTION_TITLES: Record<SectionId, string> = {
@@ -41,16 +53,16 @@ const SECTION_TITLES: Record<SectionId, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  LeadId: "Reference interne",
-  ID: "Reference dossier",
+  LeadId: "Référence interne",
+  ID: "Référence dossier",
   TypeDemande: "Type de demande",
   Statut: "Statut",
-  Prenom: "Prenom",
+  Prenom: "Prénom",
   Nom: "Nom",
-  Telephone: "Telephone",
+  Telephone: "Téléphone",
   Email: "E-mail",
-  Societe: "Societe",
-  NomSociete: "Societe",
+  Societe: "Société",
+  NomSociete: "Société",
   Organisation: "Organisation",
   TypeService: "Type de service",
   TypeTrajet: "Type de trajet",
@@ -60,15 +72,15 @@ const FIELD_LABELS: Record<string, string> = {
   HeureAller: "Heure aller",
   DateRetour: "Date retour",
   HeureRetour: "Heure retour",
-  AdresseDepart: "Adresse de depart",
-  "AdresseDépart": "Adresse de depart",
-  AdresseArrivee: "Adresse d'arrivee",
-  "AdresseArrivée": "Adresse d'arrivee",
-  AdresseDepart_1: "Depart",
-  AdresseArrivee_1: "Arrivee",
-  AdresseDepart_2: "Depart retour",
-  AdresseArrivee_2: "Arrivee retour",
-  Aeroport: "Aeroport",
+  AdresseDepart: "Adresse de départ",
+  "AdresseDépart": "Adresse de départ",
+  AdresseArrivee: "Adresse d'arrivée",
+  "AdresseArrivée": "Adresse d'arrivée",
+  AdresseDepart_1: "Départ",
+  AdresseArrivee_1: "Arrivée",
+  AdresseDepart_2: "Départ retour",
+  AdresseArrivee_2: "Arrivée retour",
+  Aeroport: "Aéroport",
   Passagers: "Passagers",
   NombrePassagers: "Passagers",
   Bagages: "Bagages",
@@ -77,25 +89,39 @@ const FIELD_LABELS: Record<string, string> = {
   Commentaires: "Commentaire client",
   Observations: "Commentaire client",
   TarifTotal: "Tarif total",
-  "Payé": "Paiement recu",
-  Paye: "Paiement recu",
+  "Payé": "Paiement reçu",
+  Paye: "Paiement reçu",
   PaymentMethode: "Mode de paiement",
-  "RésuméTrajet": "Resume du trajet",
-  ResumeTrajet: "Resume du trajet",
-  LieuEvenement: "Lieu de l'evenement",
-  HeuresMAD: "Duree M.A.D.",
-  HeuresMADEvenementiel: "Duree M.A.D. evenement",
-  AllerNumeroVol: "Numero de vol aller",
+  "RésuméTrajet": "Résumé du trajet",
+  ResumeTrajet: "Résumé du trajet",
+  LieuEvenement: "Lieu de l'événement",
+  HeuresMAD: "Durée M.A.D.",
+  HeuresMADEvenementiel: "Durée M.A.D. événement",
+  AllerNumeroVol: "Numéro de vol aller",
   AllerHeureVol: "Horaire vol aller",
-  RetourNumeroVol: "Numero de vol retour",
+  RetourNumeroVol: "Numéro de vol retour",
   RetourHeureVol: "Horaire vol retour",
   Options: "Options",
-  NombreInvites: "Invites",
+  NombreInvites: "Invités",
 };
 
 const ALLOWED_FIELDS = new Set(Object.keys(FIELD_LABELS));
 
 const KEYS_SKIP_IN_ROWS = new Set(["DashboardLink"]);
+
+/** Adresses affichées dans le bloc itinéraire du HTML (elles restent dans la version texte). */
+const ROUTE_KEYS = new Set([
+  "AdresseDepart_1",
+  "AdresseArrivee_1",
+  "AdresseDepart_2",
+  "AdresseArrivee_2",
+  "AdresseDepart",
+  "AdresseDépart",
+  "AdresseArrivee",
+  "AdresseArrivée",
+]);
+
+const SUMMARY_KEYS = new Set(["RésuméTrajet", "ResumeTrajet"]);
 
 const KEY_ORDER: Record<SectionId, string[]> = {
   meta: ["LeadId", "ID", "TypeDemande", "Statut"],
@@ -152,7 +178,7 @@ function normalize(value: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 }
 
 function publicSiteUrl(tenant: TenantConfig): string {
@@ -173,7 +199,7 @@ function money(value: string): string {
   return `${amount.toLocaleString("fr-FR", {
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
-  })} EUR`;
+  })} €`;
 }
 
 function looksLikeIsoDate(value: string): boolean {
@@ -190,7 +216,7 @@ function translateKind(value: string): string {
   const key = normalize(value);
   if (key === "contact") return "Contact";
   if (key === "devis" || key === "quote") return "Devis";
-  if (key === "reservation") return "Reservation";
+  if (key === "reservation") return "Réservation";
   if (key === "request") return "Demande";
   return "Demande";
 }
@@ -200,21 +226,21 @@ function translateStatus(value: string): string {
   const map: Record<string, string> = {
     new: "Nouveau",
     pending: "En attente",
-    accepted: "Accepte",
-    refused: "Refuse",
-    processed: "Traite",
-    archived: "Archive",
-    completed: "Termine",
-    cancelled: "Annule",
-    expired: "Expire",
-    scheduled: "Planifie",
-    refunded: "Rembourse",
-    paid: "Paye",
-    unpaid: "Non paye",
-    failed: "Echoue",
-    sent: "Envoye",
+    accepted: "Accepté",
+    refused: "Refusé",
+    processed: "Traité",
+    archived: "Archivé",
+    completed: "Terminé",
+    cancelled: "Annulé",
+    expired: "Expiré",
+    scheduled: "Planifié",
+    refunded: "Remboursé",
+    paid: "Payé",
+    unpaid: "Non payé",
+    failed: "Échoué",
+    sent: "Envoyé",
   };
-  return map[key] || "Statut inconnu";
+  return map[key] || value.trim();
 }
 
 function translatePaymentMethod(value: string): string {
@@ -223,17 +249,17 @@ function translatePaymentMethod(value: string): string {
     card: "Carte bancaire",
     carte: "Carte bancaire",
     stripe: "Carte bancaire",
-    cash: "Especes",
-    especes: "Especes",
+    cash: "Espèces",
+    especes: "Espèces",
     bank_transfer: "Virement",
     transfer: "Virement",
     virement: "Virement",
     paypal: "PayPal",
-    paid: "Paye",
-    unpaid: "Non paye",
+    paid: "Payé",
+    unpaid: "Non payé",
     pending: "En attente",
-    refunded: "Rembourse",
-    failed: "Echoue",
+    refunded: "Remboursé",
+    failed: "Échoué",
   };
   return map[key] || value;
 }
@@ -311,10 +337,10 @@ function buildRowDefs(flat: Record<string, string>): RowDef[] {
     rows.push({ key, label, value, section: sectionForKey(key) });
   }
 
-  if (company && !usedLabels.has("Societe")) {
+  if (company && !usedLabels.has("Société")) {
     rows.push({
       key: "NomSociete",
-      label: "Societe",
+      label: "Société",
       value: company,
       section: "client",
     });
@@ -338,65 +364,156 @@ function sortRows(section: SectionId, rows: RowDef[]): RowDef[] {
   });
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Briques HTML                                                              */
+/* -------------------------------------------------------------------------- */
+
 function valueHtml(row: RowDef): string {
-  if (row.key === "Telephone") {
-    return `<a href="${telHref(row.value)}" style="color:${THEME.accent};text-decoration:none;font-weight:600">${esc(row.value)}</a>`;
+  if (row.key === "Telephone" || row.key === "vtc-tel") {
+    return `<a class="lnk" href="${telHref(row.value)}" style="color:${THEME.accentDark};text-decoration:none;font-weight:700">${esc(row.value)}</a>`;
   }
-  if (row.key === "Email") {
-    return `<a href="mailto:${esc(row.value)}" style="color:${THEME.accent};text-decoration:none;font-weight:600">${esc(row.value)}</a>`;
+  if (row.key === "Email" || row.key === "vtc-mail") {
+    return `<a class="lnk" href="mailto:${esc(row.value)}" style="color:${THEME.accentDark};text-decoration:none;font-weight:700">${esc(row.value)}</a>`;
   }
   return esc(row.value);
 }
 
+function eyebrowHtml(text: string): string {
+  return `<div class="eyebrow" style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${THEME.accentDark}">${esc(text)}</div>`;
+}
+
 function rowTableHtml(rows: RowDef[]): string {
   if (!rows.length) return "";
+  const lastIndex = rows.length - 1;
   const body = rows
-    .map(
-      (row) => `<tr>
-<td style="padding:11px 0;border-bottom:1px solid ${THEME.border};font-size:13px;color:${THEME.textMuted};vertical-align:top">${esc(row.label)}</td>
-<td style="padding:11px 0;border-bottom:1px solid ${THEME.border};font-size:14px;color:${THEME.text};font-weight:600;text-align:right;vertical-align:top;word-break:break-word">${valueHtml(row)}</td>
-</tr>`
-    )
+    .map((row, index) => {
+      const border = index === lastIndex ? "none" : `1px solid ${THEME.border}`;
+      return `<tr>
+<td class="row-label t-muted bd" width="38%" style="padding:11px 12px 11px 0;border-bottom:${border};font-size:13px;line-height:1.5;color:${THEME.textMuted};vertical-align:top">${esc(row.label)}</td>
+<td class="row-value t-main bd" style="padding:11px 0;border-bottom:${border};font-size:14px;line-height:1.5;color:${THEME.text};font-weight:600;vertical-align:top;word-break:break-word">${valueHtml(row)}</td>
+</tr>`;
+    })
     .join("");
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${body}</table>`;
 }
 
-function cardSectionHtml(title: string, rows: RowDef[]): string {
-  if (!rows.length) return "";
+function cardHtml(title: string, inner: string): string {
+  if (!inner) return "";
   return `<tr>
-<td style="padding:0 24px 18px">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;background:${THEME.cardAlt};border:1px solid ${THEME.border};border-radius:18px">
-    <tr>
-      <td style="padding:18px 18px 6px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent}">
-        ${esc(title)}
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:0 18px 12px">
-        ${rowTableHtml(rows)}
-      </td>
-    </tr>
+<td class="px" style="padding:0 32px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-alt bd" style="border-collapse:separate;background:${THEME.cardAlt};border:1px solid ${THEME.border};border-radius:14px">
+    <tr><td style="padding:16px 18px 6px">${eyebrowHtml(title)}</td></tr>
+    <tr><td style="padding:0 18px 10px">${inner}</td></tr>
   </table>
 </td>
 </tr>`;
 }
 
-function quickFactsHtml(rows: RowDef[]): string {
+function cardSectionHtml(title: string, rows: RowDef[]): string {
   if (!rows.length) return "";
-  const cells = rows
+  return cardHtml(title, rowTableHtml(rows));
+}
+
+function commentCardHtml(title: string, text: string): string {
+  return cardHtml(
+    title,
+    `<p class="t-main" style="margin:2px 0 8px;font-size:14px;line-height:1.7;color:${THEME.text};word-break:break-word;white-space:pre-line">${esc(text)}</p>`
+  );
+}
+
+function legHtml(leg: Leg): string {
+  const dot = (color: string) =>
+    `<div style="width:10px;height:10px;border-radius:5px;background:${color};font-size:0;line-height:0">&nbsp;</div>`;
+  const place = (caption: string, address: string) =>
+    `<div class="t-muted" style="font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${THEME.textMuted};font-weight:700">${caption}</div>
+     <div class="t-main" style="margin-top:2px;font-size:15px;line-height:1.45;color:${THEME.text};font-weight:600;word-break:break-word">${esc(address)}</div>`;
+  const note = leg.note
+    ? `<tr><td></td><td style="padding:8px 0 0 12px"><span class="t-soft" style="font-size:12px;color:${THEME.textSoft}">${esc(leg.note)}</span></td></tr>`
+    : "";
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:2px 0 10px">
+    ${leg.title ? `<tr><td colspan="2" style="padding:0 0 8px;font-size:12px;font-weight:800;color:${THEME.accentDark}">${esc(leg.title)}</td></tr>` : ""}
+    <tr>
+      <td width="10" valign="top" style="padding:5px 0 0">${dot(THEME.accent)}</td>
+      <td style="padding:0 0 0 12px">${place("Départ", leg.from)}</td>
+    </tr>
+    <tr>
+      <td width="10" style="padding:3px 0 3px 4px"><div style="width:0;height:20px;border-left:2px dotted #cbd5e1;font-size:0;line-height:0">&nbsp;</div></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td width="10" valign="top" style="padding:5px 0 0">${dot(THEME.headerBg)}</td>
+      <td style="padding:0 0 0 12px">${place("Arrivée", leg.to)}</td>
+    </tr>
+    ${note}
+  </table>`;
+}
+
+function pickValue(flat: Record<string, string>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = flat[key];
+    if (isMeaningfulValue(value)) return value.trim();
+  }
+  return "";
+}
+
+function legsFromFlat(flat: Record<string, string>): Leg[] {
+  const legs: Leg[] = [];
+  const outFrom = pickValue(flat, "AdresseDepart_1", "AdresseDepart", "AdresseDépart");
+  const outTo = pickValue(flat, "AdresseArrivee_1", "AdresseArrivee", "AdresseArrivée");
+  const backFrom = pickValue(flat, "AdresseDepart_2");
+  const backTo = pickValue(flat, "AdresseArrivee_2");
+
+  if (outFrom && outTo) legs.push({ title: "Aller", from: outFrom, to: outTo });
+  if (backFrom && backTo) legs.push({ title: "Retour", from: backFrom, to: backTo });
+  if (legs.length === 1) legs[0].title = "";
+  return legs;
+}
+
+/** « A → B — Aller simple » ou « A -> B » vers un trajet affichable. */
+function legFromSummary(summary: string): Leg | null {
+  const parts = summary.split(/\s*(?:→|->)\s*/);
+  if (parts.length !== 2) return null;
+  const from = parts[0].trim();
+  const rest = parts[1].split(/\s+[—–]\s+/);
+  const to = rest[0].trim();
+  if (!from || !to) return null;
+  const note = rest.slice(1).join(" — ").trim();
+  return { title: "", from, to, note: note || undefined };
+}
+
+function factsHtml(facts: Fact[]): string {
+  if (!facts.length) return "";
+  const width = Math.floor(100 / facts.length);
+  const cells = facts
     .map(
-      (row) => `<td style="padding:10px 12px;border:1px solid ${THEME.border};border-radius:14px;background:${THEME.cardAlt};vertical-align:top">
-        <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${THEME.textMuted};font-weight:700;margin-bottom:6px">${esc(row.label)}</div>
-        <div style="font-size:14px;line-height:1.45;color:${THEME.text};font-weight:700">${valueHtml(row)}</div>
+      (fact) => `<td class="stack" width="${width}%" valign="top" style="padding:0 4px 8px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-alt bd" style="border-collapse:separate;background:${THEME.cardAlt};border:1px solid ${THEME.border};border-radius:12px">
+          <tr><td style="padding:12px 14px">
+            <div class="t-muted" style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:${THEME.textMuted};font-weight:700">${esc(fact.label)}</div>
+            <div class="${fact.emphasis ? "t-accent" : "t-main"}" style="margin-top:5px;font-size:${fact.emphasis ? "22px" : "15px"};line-height:1.3;color:${fact.emphasis ? THEME.accentDark : THEME.text};font-weight:800;word-break:break-word">${esc(fact.value)}</div>
+          </td></tr>
+        </table>
       </td>`
     )
     .join("");
 
   return `<tr>
-<td style="padding:0 24px 20px">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:8px 0;margin:0 -8px">
-    <tr>${cells}</tr>
+<td class="px-facts" style="padding:6px 28px 8px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>${cells}</tr></table>
+</td>
+</tr>`;
+}
+
+function amountHeroHtml(label: string, amount: string): string {
+  return `<tr>
+<td class="px" style="padding:6px 32px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-accent" style="border-collapse:separate;background:${THEME.accentSoft};border:1px solid ${THEME.warningBorder};border-radius:14px">
+    <tr><td align="center" style="padding:20px 16px">
+      ${eyebrowHtml(label)}
+      <div class="t-main" style="margin-top:8px;font-size:36px;line-height:1.15;font-weight:800;color:${THEME.text}">${esc(amount)}</div>
+    </td></tr>
   </table>
 </td>
 </tr>`;
@@ -405,17 +522,55 @@ function quickFactsHtml(rows: RowDef[]): string {
 function badgeHtml(label: string, tone: "accent" | "success" | "danger"): string {
   const styles =
     tone === "success"
-      ? `background:${THEME.successBg};color:${THEME.success};border:1px solid #bbf7d0;`
+      ? `background:${THEME.successBg};color:${THEME.success};border:1px solid ${THEME.successBorder};`
       : tone === "danger"
-        ? `background:${THEME.dangerBg};color:${THEME.danger};border:1px solid #fecaca;`
-        : `background:${THEME.warningBg};color:${THEME.warning};border:1px solid #fed7aa;`;
+        ? `background:${THEME.dangerBg};color:${THEME.danger};border:1px solid ${THEME.dangerBorder};`
+        : `background:${THEME.warningBg};color:${THEME.warning};border:1px solid ${THEME.warningBorder};`;
 
-  return `<span style="display:inline-block;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;${styles}">${esc(label)}</span>`;
+  return `<span style="display:inline-block;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;${styles}">${esc(label)}</span>`;
 }
 
-function buttonHtml(label: string, href: string): string {
-  return `<a href="${esc(href)}" style="display:inline-block;background:${THEME.accent};color:#ffffff;text-decoration:none;padding:15px 28px;border-radius:14px;font-size:15px;font-weight:700">${esc(label)}</a>`;
+function buttonHtml(label: string, href: string, variant: ButtonVariant = "primary"): string {
+  const style =
+    variant === "primary"
+      ? `background:${THEME.accent};color:#ffffff;border:2px solid ${THEME.accent};`
+      : `background:#ffffff;color:${THEME.accentDark};border:2px solid ${THEME.accent};`;
+  return `<a class="btn${variant === "secondary" ? " btn-ghost" : ""}" href="${esc(href)}" style="display:inline-block;${style}text-decoration:none;padding:13px 24px;border-radius:12px;font-size:15px;line-height:1.2;font-weight:700;margin:0 4px 8px">${esc(label)}</a>`;
 }
+
+function actionsRowHtml(buttons: string[], align: "left" | "center" = "left"): string {
+  const content = buttons.filter(Boolean).join("");
+  if (!content) return "";
+  return `<tr><td class="px" align="${align}" style="padding:12px 28px 14px;text-align:${align}">${content}</td></tr>`;
+}
+
+const EMAIL_CSS = `
+  body { margin:0; padding:0; -webkit-text-size-adjust:100%; }
+  a { word-break:break-word; }
+  @media only screen and (max-width:540px) {
+    .px { padding-left:18px !important; padding-right:18px !important; }
+    .px-facts { padding-left:14px !important; padding-right:14px !important; }
+    .stack { display:block !important; width:100% !important; box-sizing:border-box; }
+    .h1 { font-size:24px !important; }
+    .btn { display:block !important; margin:0 0 10px !important; text-align:center !important; }
+    .row-label { display:block !important; width:100% !important; padding:11px 0 0 !important; border-bottom:0 !important; }
+    .row-value { display:block !important; width:100% !important; padding:2px 0 11px !important; }
+    .outer { padding:12px 8px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    body, .bg-page { background:#0b1120 !important; }
+    .bg-card { background:#111827 !important; border-color:#273449 !important; }
+    .bg-alt { background:#182236 !important; border-color:#273449 !important; }
+    .bg-accent { background:#2a1a10 !important; border-color:#7c3a12 !important; }
+    .bd { border-color:#273449 !important; }
+    .t-main { color:#f1f5f9 !important; }
+    .t-soft { color:#cbd5e1 !important; }
+    .t-muted { color:#94a3b8 !important; }
+    .t-accent, .eyebrow, .lnk { color:#fb923c !important; }
+    .btn-ghost { background:transparent !important; color:#fb923c !important; }
+    .foot { background:#0f172a !important; border-color:#273449 !important; }
+  }
+`;
 
 function shellHtml(opts: {
   preheader: string;
@@ -424,42 +579,58 @@ function shellHtml(opts: {
   title: string;
   intro: string;
   bodyBlocks: string;
-  cta?: string;
+  /** Boutons placés juste sous l'introduction (actions prioritaires). */
+  actionsTop?: string[];
+  /** Boutons placés en fin de message (liens secondaires). */
+  actionsBottom?: string[];
+  reference?: string;
   footerSite: string;
   footerText: string;
 }): string {
-  const ctaBlock = opts.cta
-    ? `<tr><td style="padding:0 24px 22px;text-align:center">${opts.cta}</td></tr>`
+  const reference = opts.reference
+    ? `<span class="t-muted" style="display:inline-block;margin-left:10px;font-size:12px;color:${THEME.textMuted};letter-spacing:0.03em;vertical-align:middle">Réf. ${esc(opts.reference)}</span>`
     : "";
 
   return `<!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="supported-color-schemes" content="light dark"/>
+<meta name="x-apple-disable-message-reformatting"/>
 <title>${esc(opts.title)}</title>
+<style>${EMAIL_CSS}</style>
 </head>
-<body style="margin:0;padding:0;background:${THEME.pageBg};font-family:Segoe UI,Arial,sans-serif">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${THEME.pageBg};padding:24px 12px">
+<body class="bg-page" style="margin:0;padding:0;background:${THEME.pageBg};font-family:${FONT}">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:${THEME.pageBg}">${esc(opts.preheader)}${"&zwnj;&nbsp;".repeat(30)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-page outer" style="background:${THEME.pageBg};padding:28px 12px">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:${THEME.cardBg};border:1px solid ${THEME.border};border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,0.10)">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="bg-card" style="max-width:600px;background:${THEME.cardBg};border:1px solid ${THEME.border};border-radius:18px;overflow:hidden;box-shadow:0 12px 40px rgba(15,23,42,0.08)">
+          <tr><td bgcolor="${THEME.accent}" style="height:4px;background:${THEME.accent};font-size:0;line-height:0">&nbsp;</td></tr>
           <tr>
-            <td style="padding:28px 24px 24px;background:${THEME.headerBg};text-align:center">
-              <div style="font-size:28px;font-weight:800;letter-spacing:0.08em;color:#ffffff">${esc(opts.brand)}</div>
-              <div style="margin-top:16px">${opts.badge}</div>
-              <div style="margin-top:18px;font-size:28px;line-height:1.2;font-weight:800;color:#ffffff">${esc(opts.title)}</div>
-              <div style="margin-top:12px;font-size:15px;line-height:1.7;color:#d7dee8">${opts.intro}</div>
+            <td class="px" bgcolor="${THEME.headerBg}" style="padding:20px 32px;background:${THEME.headerBg}">
+              <div style="font-size:16px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#ffffff">${esc(opts.brand)}</div>
             </td>
           </tr>
-          ${ctaBlock}
-          ${opts.bodyBlocks}
           <tr>
-            <td style="padding:24px;background:#f8fafc;border-top:1px solid ${THEME.border};text-align:center">
-              <p style="margin:0;font-size:13px;line-height:1.7;color:${THEME.textMuted}">
+            <td class="px" style="padding:30px 32px 8px">
+              <div>${opts.badge}${reference}</div>
+              <h1 class="h1 t-main" style="margin:16px 0 0;font-size:28px;line-height:1.2;font-weight:800;color:${THEME.text}">${esc(opts.title)}</h1>
+              <p class="t-soft" style="margin:12px 0 0;font-size:15px;line-height:1.7;color:${THEME.textSoft}">${opts.intro}</p>
+            </td>
+          </tr>
+          ${actionsRowHtml(opts.actionsTop ?? [])}
+          ${opts.bodyBlocks}
+          ${actionsRowHtml(opts.actionsBottom ?? [])}
+          <tr><td style="padding:0 0 8px;font-size:0;line-height:0">&nbsp;</td></tr>
+          <tr>
+            <td class="px foot" style="padding:22px 32px;background:${THEME.cardAlt};border-top:1px solid ${THEME.border};text-align:center">
+              <div class="t-main" style="font-size:13px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:${THEME.text}">${esc(opts.brand)}</div>
+              <p class="t-muted" style="margin:8px 0 0;font-size:12px;line-height:1.7;color:${THEME.textMuted}">
                 ${esc(opts.footerText)}<br/>
-                <a href="${esc(opts.footerSite)}" style="color:${THEME.accent};text-decoration:none;font-weight:700">${esc(opts.footerSite)}</a>
+                <a class="lnk" href="${esc(opts.footerSite)}" style="color:${THEME.accentDark};text-decoration:none;font-weight:700">${esc(opts.footerSite)}</a>
               </p>
             </td>
           </tr>
@@ -482,7 +653,7 @@ function rowsTextBySection(rows: RowDef[]): string {
     if (!list.length) continue;
     parts.push(`[${SECTION_TITLES[section]}]`);
     for (const row of list) {
-      parts.push(`${row.label}: ${row.value}`);
+      parts.push(`${row.label} : ${row.value}`);
     }
     parts.push("");
   }
@@ -497,60 +668,120 @@ function summaryLineIsUseful(line: string): boolean {
   return true;
 }
 
-function summaryListHtml(lines: string[]): string {
-  if (!lines.length) return "";
-  const content = lines
-    .map(
-      (line) => `<tr>
-<td style="padding:11px 0;border-bottom:1px solid ${THEME.border};font-size:14px;line-height:1.55;color:${THEME.text};word-break:break-word">${esc(line)}</td>
-</tr>`
-    )
-    .join("");
+type SummaryItem = { label: string; value: string };
 
+function parseSummaryLine(line: string): SummaryItem {
+  const index = line.indexOf(" : ");
+  if (index > 0 && index <= 32) {
+    return { label: line.slice(0, index).trim(), value: line.slice(index + 3).trim() };
+  }
+  return { label: "", value: line.trim() };
+}
+
+function summaryLabelIsPrice(label: string): boolean {
+  return /^(tarif|montant|prix)/i.test(normalize(label));
+}
+
+function summaryRowHtml(item: SummaryItem, isLast: boolean): string {
+  const border = isLast ? "none" : `1px solid ${THEME.border}`;
+  if (!item.label) {
+    return `<tr><td colspan="2" class="t-main bd" style="padding:11px 0;border-bottom:${border};font-size:14px;line-height:1.55;color:${THEME.text};word-break:break-word">${esc(item.value)}</td></tr>`;
+  }
+  const isRef = /^r[ée]f/i.test(item.label);
+  const isPrice = summaryLabelIsPrice(item.label);
+  const valueStyle = isRef
+    ? `font-family:Consolas,Menlo,monospace;font-size:12px;font-weight:600;color:${THEME.textSoft}`
+    : isPrice
+      ? `font-size:17px;font-weight:800;color:${THEME.accentDark}`
+      : `font-size:14px;font-weight:600;color:${THEME.text}`;
+  const valueClass = isRef ? "t-soft" : isPrice ? "t-accent" : "t-main";
   return `<tr>
-<td style="padding:0 24px 18px">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${THEME.cardAlt};border:1px solid ${THEME.border};border-radius:18px;padding:0 18px">
-    <tr>
-      <td style="padding:18px 0 6px;font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent}">
-        Recapitulatif
-      </td>
-    </tr>
-    <tr>
-      <td>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${content}</table>
-      </td>
-    </tr>
-  </table>
-</td>
+<td class="row-label t-muted bd" width="38%" style="padding:11px 12px 11px 0;border-bottom:${border};font-size:13px;line-height:1.5;color:${THEME.textMuted};vertical-align:top">${esc(item.label)}</td>
+<td class="row-value ${valueClass} bd" style="padding:11px 0;border-bottom:${border};line-height:1.5;vertical-align:top;word-break:break-word;${valueStyle}">${esc(item.value)}</td>
 </tr>`;
 }
 
-function buildOperatorBlocks(type: "contact" | "devis" | "reservation", flat: Record<string, string>): {
-  quickFacts: string;
+function summaryListHtml(lines: string[]): string {
+  if (!lines.length) return "";
+  const items = lines.map(parseSummaryLine);
+
+  let routeHtml = "";
+  const rest: SummaryItem[] = [];
+  for (const item of items) {
+    const leg = /^trajet$/i.test(normalize(item.label)) ? legFromSummary(item.value) : null;
+    if (leg && !routeHtml) routeHtml = legHtml(leg);
+    else rest.push(item);
+  }
+
+  const table = rest.length
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${rest
+        .map((item, index) => summaryRowHtml(item, index === rest.length - 1))
+        .join("")}</table>`
+    : "";
+
+  const divider = routeHtml && table ? `<div class="bd" style="height:1px;background:${THEME.border};margin:6px 0 4px;font-size:0;line-height:0">&nbsp;</div>` : "";
+  return cardHtml("Récapitulatif", `${routeHtml}${divider}${table}`);
+}
+
+function bookingFacts(flat: Record<string, string>): Fact[] {
+  const facts: Fact[] = [];
+
+  const date = pickValue(flat, "DateAller", "Date");
+  const time = pickValue(flat, "HeureAller", "Heure");
+  if (date) {
+    facts.push({ label: "Départ le", value: [formatDateValue(date), time].filter(Boolean).join(" · ") });
+  } else if (isMeaningfulValue(flat.DateEnvoi)) {
+    facts.push({ label: "Reçu le", value: flat.DateEnvoi.trim() });
+  }
+
+  const price = isMeaningfulValue(flat.TarifTotal) ? money(flat.TarifTotal) : "";
+  if (price) facts.push({ label: "Tarif", value: price, emphasis: true });
+
+  if (isMeaningfulValue(flat.Statut)) facts.push({ label: "Statut", value: translateStatus(flat.Statut) });
+
+  return facts;
+}
+
+function referenceOf(flat: Record<string, string>): string {
+  const id = pickValue(flat, "ID");
+  if (id) return id;
+  const lead = pickValue(flat, "LeadId");
+  return lead.length > 14 ? `${lead.slice(0, 8)}…` : lead;
+}
+
+function buildOperatorBlocks(flat: Record<string, string>): {
+  facts: string;
   sections: string;
 } {
   const rows = buildRowDefs(flat);
+  const legs = legsFromFlat(flat);
+  const hasRoute = legs.length > 0;
   const grouped = new Map<SectionId, RowDef[]>();
   for (const section of SECTION_ORDER) grouped.set(section, []);
   for (const row of rows) grouped.get(row.section)!.push(row);
 
-  const metaRows = sortRows("meta", grouped.get("meta")!).slice(0, 3);
-  const quickFacts = quickFactsHtml(metaRows);
+  const tripRows = sortRows("trip", grouped.get("trip")!).filter(
+    (row) => !ROUTE_KEYS.has(row.key) && !(hasRoute && SUMMARY_KEYS.has(row.key))
+  );
+  const tripInner = `${legs.map(legHtml).join("")}${
+    legs.length && tripRows.length
+      ? `<div class="bd" style="height:1px;background:${THEME.border};margin:6px 0 4px;font-size:0;line-height:0">&nbsp;</div>`
+      : ""
+  }${rowTableHtml(tripRows)}`;
+
+  const commentRows = grouped.get("comment")!;
+  const commentText = commentRows.length ? sortRows("comment", commentRows)[0].value : "";
 
   const sections = [
     cardSectionHtml("Client", sortRows("client", grouped.get("client")!)),
-    cardSectionHtml("Prestation et trajet", sortRows("trip", grouped.get("trip")!)),
+    cardHtml("Prestation et trajet", legs.length || tripRows.length ? tripInner : ""),
     cardSectionHtml("Tarif et paiement", sortRows("pricing", grouped.get("pricing")!)),
-    cardSectionHtml("Commentaire", sortRows("comment", grouped.get("comment")!)),
+    commentText ? commentCardHtml("Commentaire du client", commentText) : "",
   ]
     .filter(Boolean)
     .join("");
 
-  if (type === "contact" && !grouped.get("trip")!.length && !grouped.get("pricing")!.length) {
-    return { quickFacts, sections };
-  }
-
-  return { quickFacts, sections };
+  return { facts: factsHtml(bookingFacts(flat)), sections };
 }
 
 function buildCustomerBodyBlocks(lines: string[], noteBlock: string): string {
@@ -559,10 +790,33 @@ function buildCustomerBodyBlocks(lines: string[], noteBlock: string): string {
 
 function customerDecisionBadge(kind: "devis" | "reservation", outcome: CustomerDecisionOutcome): string {
   if (outcome === "accepted") {
-    return kind === "devis" ? "Devis accepte" : "Reservation acceptee";
+    return kind === "devis" ? "Devis accepté" : "Réservation acceptée";
   }
-  return kind === "devis" ? "Devis refuse" : "Reservation refusee";
+  return kind === "devis" ? "Devis refusé" : "Réservation refusée";
 }
+
+function contactRowsOf(vtcPhone?: string | null, vtcEmail?: string | null): RowDef[] {
+  const rows: RowDef[] = [];
+  if (vtcPhone?.trim()) {
+    rows.push({ key: "vtc-tel", label: "Téléphone", value: vtcPhone.trim(), section: "meta" });
+  }
+  if (vtcEmail?.trim()) {
+    rows.push({ key: "vtc-mail", label: "E-mail", value: vtcEmail.trim(), section: "meta" });
+  }
+  return rows;
+}
+
+function tripBlockFromSummary(summary: string | null | undefined): string {
+  const text = summary?.trim();
+  if (!text) return "";
+  const leg = legFromSummary(text);
+  if (leg) return cardHtml("Votre course", legHtml(leg));
+  return commentCardHtml("Votre course", text);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  E-mails                                                                   */
+/* -------------------------------------------------------------------------- */
 
 export function buildOperatorEmail(opts: {
   tenant: TenantConfig;
@@ -577,28 +831,38 @@ export function buildOperatorEmail(opts: {
       ? "Nouvelle demande de contact"
       : opts.type === "devis"
         ? "Nouvelle demande de devis"
-        : "Nouvelle reservation";
+        : "Nouvelle réservation";
   const subject = `${opts.subjectPrefix}${title} - ${brand}`;
   const dashboardLink =
     opts.flat.DashboardLink && isMeaningfulValue(opts.flat.DashboardLink) ? opts.flat.DashboardLink.trim() : "";
 
-  const { quickFacts, sections } = buildOperatorBlocks(opts.type, opts.flat);
+  const { facts, sections } = buildOperatorBlocks(opts.flat);
   const intro =
     opts.type === "contact"
-      ? "Un client attend une reponse. Retrouvez les informations essentielles ci-dessous et ouvrez la fiche pour traiter la demande."
-      : "Une nouvelle demande est arrivee dans votre espace professionnel. Ouvrez la fiche pour la consulter et agir rapidement.";
+      ? "Un client attend une réponse. Retrouvez les informations essentielles ci-dessous et ouvrez la fiche pour traiter la demande."
+      : "Une nouvelle demande est arrivée dans votre espace professionnel. Ouvrez la fiche pour la consulter et agir rapidement.";
 
-  const bodyBlocks = `${quickFacts}${sections}`;
+  const phone = pickValue(opts.flat, "Telephone");
+  const email = pickValue(opts.flat, "Email");
+  const firstName = pickValue(opts.flat, "Prenom");
+
+  const actionsTop = [
+    dashboardLink ? buttonHtml("Voir la demande", dashboardLink) : "",
+    phone ? buttonHtml(firstName ? `Appeler ${firstName}` : "Appeler", telHref(phone), "secondary") : "",
+    email ? buttonHtml("Répondre", `mailto:${email}`, "secondary") : "",
+  ];
+
   const html = shellHtml({
     preheader: `${title} - ${brand}`,
     brand,
     badge: badgeHtml(title, "accent"),
+    reference: referenceOf(opts.flat),
     title,
     intro,
-    bodyBlocks,
-    cta: dashboardLink ? buttonHtml("Voir la demande", dashboardLink) : undefined,
+    bodyBlocks: `${facts}${sections}`,
+    actionsTop,
     footerSite: site,
-    footerText: "Notification operateur - espace professionnel",
+    footerText: "Notification opérateur - espace professionnel",
   });
 
   const textParts = [
@@ -628,32 +892,32 @@ export function buildCustomerConfirmation(opts: {
   const brand = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
   const usefulLines = opts.summaryLines.filter(summaryLineIsUseful);
-  const kindLabel = opts.type === "devis" ? "demande de devis" : "demande de reservation";
+  const kindLabel = opts.type === "devis" ? "demande de devis" : "demande de réservation";
   const subject =
     opts.type === "devis"
-      ? `${brand} - Nous avons bien recu votre demande de devis`
-      : `${brand} - Nous avons bien recu votre demande de reservation`;
+      ? `${brand} - Nous avons bien reçu votre demande de devis`
+      : `${brand} - Nous avons bien reçu votre demande de réservation`;
 
-  const intro = `Bonjour ${esc(opts.recipientName)},<br/>Nous avons bien recu votre ${esc(kindLabel)}. Notre equipe revient vers vous tres rapidement avec la suite a donner.`;
+  const intro = `Bonjour ${esc(opts.recipientName)},<br/>Nous avons bien reçu votre ${esc(kindLabel)}. Notre équipe revient vers vous très rapidement avec la suite à donner.`;
   const bodyBlocks = buildCustomerBodyBlocks(usefulLines, "");
 
   const html = shellHtml({
     preheader: subject,
     brand,
-    badge: badgeHtml(opts.type === "devis" ? "Demande de devis" : "Demande de reservation", "accent"),
-    title: "Nous avons bien recu votre demande",
+    badge: badgeHtml(opts.type === "devis" ? "Demande de devis" : "Demande de réservation", "accent"),
+    title: "Nous avons bien reçu votre demande",
     intro,
     bodyBlocks,
-    cta: buttonHtml("Visiter notre site", site),
+    actionsBottom: [buttonHtml("Visiter notre site", site)],
     footerSite: site,
-    footerText: `${brand} - Accuse de reception`,
+    footerText: `${brand} - Accusé de réception`,
   });
 
   const text = [
     `Bonjour ${opts.recipientName},`,
     "",
-    `Nous avons bien recu votre ${kindLabel}.`,
-    "Notre equipe revient vers vous tres rapidement.",
+    `Nous avons bien reçu votre ${kindLabel}.`,
+    "Notre équipe revient vers vous très rapidement.",
     "",
     usefulLines.join("\n"),
     "",
@@ -680,33 +944,33 @@ export function buildCustomerDecisionEmail(opts: {
   const isAccepted = opts.outcome === "accepted";
   const subject = isAccepted
     ? opts.kind === "devis"
-      ? `${brand} - Votre devis a ete accepte`
-      : `${brand} - Votre reservation a ete acceptee`
+      ? `${brand} - Votre devis a été accepté`
+      : `${brand} - Votre réservation a été acceptée`
     : opts.kind === "devis"
-      ? `${brand} - Votre demande de devis ne peut pas etre acceptee`
-      : `${brand} - Votre reservation ne peut pas etre acceptee`;
+      ? `${brand} - Votre demande de devis ne peut pas être acceptée`
+      : `${brand} - Votre réservation ne peut pas être acceptée`;
 
   const title = isAccepted
     ? opts.kind === "devis"
-      ? "Votre devis a ete accepte"
-      : "Votre reservation a ete acceptee"
+      ? "Votre devis a été accepté"
+      : "Votre réservation a été acceptée"
     : opts.kind === "devis"
-      ? "Votre demande de devis ne peut pas etre acceptee"
-      : "Votre reservation ne peut pas etre acceptee";
+      ? "Votre demande de devis ne peut pas être acceptée"
+      : "Votre réservation ne peut pas être acceptée";
 
   const intro = isAccepted
-    ? `Bonjour ${esc(opts.recipientName)},<br/>Bonne nouvelle : votre demande a ete validee. Retrouvez ci-dessous le recapitulatif utile pour la suite.`
-    : `Bonjour ${esc(opts.recipientName)},<br/>Nous sommes desoles, mais nous ne pouvons pas donner suite a votre demande dans les conditions actuelles.`;
+    ? `Bonjour ${esc(opts.recipientName)},<br/>Bonne nouvelle : votre demande a été validée. Retrouvez ci-dessous le récapitulatif utile pour la suite.`
+    : `Bonjour ${esc(opts.recipientName)},<br/>Nous sommes désolés, mais nous ne pouvons pas donner suite à votre demande dans les conditions actuelles.`;
 
   const noteBlock =
     opts.operatorNote && isMeaningfulValue(opts.operatorNote) && !isAccepted
       ? `<tr>
-<td style="padding:0 24px 18px">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${THEME.dangerBg};border:1px solid #fecaca;border-radius:18px">
+<td class="px" style="padding:0 32px 16px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;background:${THEME.dangerBg};border:1px solid ${THEME.dangerBorder};border-left:4px solid ${THEME.danger};border-radius:12px">
     <tr>
-      <td style="padding:18px">
-        <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.danger};margin-bottom:8px">Message de notre equipe</div>
-        <div style="font-size:14px;line-height:1.7;color:${THEME.text}">${esc(opts.operatorNote.trim())}</div>
+      <td style="padding:16px 18px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${THEME.danger};margin-bottom:8px">Message de notre équipe</div>
+        <div style="font-size:14px;line-height:1.7;color:${THEME.text};white-space:pre-line">${esc(opts.operatorNote.trim())}</div>
       </td>
     </tr>
   </table>
@@ -723,7 +987,7 @@ export function buildCustomerDecisionEmail(opts: {
     title,
     intro,
     bodyBlocks,
-    cta: buttonHtml(isAccepted ? "Visiter notre site" : "Nous contacter", site),
+    actionsBottom: [buttonHtml(isAccepted ? "Visiter notre site" : "Nous contacter", site)],
     footerSite: site,
     footerText: `${brand} - Suivi de votre demande`,
   });
@@ -733,10 +997,10 @@ export function buildCustomerDecisionEmail(opts: {
     "",
     title,
     isAccepted
-      ? "Votre demande a ete validee par notre equipe."
-      : "Nous ne pouvons pas donner suite a votre demande dans les conditions actuelles.",
+      ? "Votre demande a été validée par notre équipe."
+      : "Nous ne pouvons pas donner suite à votre demande dans les conditions actuelles.",
     opts.operatorNote && isMeaningfulValue(opts.operatorNote) && !isAccepted ? `\nMessage :\n${opts.operatorNote.trim()}` : "",
-    usefulLines.length ? `\nRecapitulatif :\n${usefulLines.join("\n")}` : "",
+    usefulLines.length ? `\nRécapitulatif :\n${usefulLines.join("\n")}` : "",
     "",
     brand,
     site,
@@ -758,27 +1022,29 @@ export function buildOperatorDecisionEmail(opts: {
   const brand = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
   const refused = normalize(opts.statusLabel).includes("refus");
-  const title = refused ? "Demande refusee" : "Demande acceptee";
+  const title = refused ? "Demande refusée" : "Demande acceptée";
+  const shortRef = opts.leadId.length > 14 ? `${opts.leadId.slice(0, 8)}…` : opts.leadId;
   const html = shellHtml({
     preheader: `${title} - ${brand}`,
     brand,
     badge: badgeHtml(title, refused ? "danger" : "success"),
+    reference: shortRef,
     title,
-    intro: `La demande ${esc(opts.leadId)} a ete mise a jour dans votre espace professionnel.`,
-    bodyBlocks: cardSectionHtml("Resume", [
-      { key: "reference", label: "Reference", value: opts.leadId, section: "meta" },
+    intro: `La demande ${esc(shortRef)} a été mise à jour dans votre espace professionnel.`,
+    bodyBlocks: cardSectionHtml("Résumé", [
+      { key: "reference", label: "Référence", value: opts.leadId, section: "meta" },
       { key: "client", label: "Client", value: opts.clientName, section: "client" },
       { key: "type", label: "Type", value: opts.kindLabel, section: "meta" },
       { key: "statut", label: "Nouveau statut", value: opts.statusLabel, section: "meta" },
     ]),
-    cta: opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : undefined,
+    actionsTop: opts.proUrl ? [buttonHtml("Voir la demande", opts.proUrl)] : [],
     footerSite: site,
-    footerText: "Notification operateur - suivi de demande",
+    footerText: "Notification opérateur - suivi de demande",
   });
 
   const text = [
     title,
-    `Reference : ${opts.leadId}`,
+    `Référence : ${opts.leadId}`,
     `Client : ${opts.clientName}`,
     `Type : ${opts.kindLabel}`,
     `Nouveau statut : ${opts.statusLabel}`,
@@ -810,75 +1076,49 @@ export function buildPaymentLinkCustomerEmail(opts: {
   const subject = "Lien de paiement pour votre course VTC";
   const name = opts.clientGreetingName.trim();
   const greetingHtml = name
-    ? `Bonjour ${esc(name)},<br/><br/>Votre demande a ete acceptee. Vous pouvez regler votre course en ligne de facon securisee.`
-    : `Bonjour,<br/><br/>Votre demande a ete acceptee. Vous pouvez regler votre course en ligne de facon securisee.`;
+    ? `Bonjour ${esc(name)},<br/><br/>Votre demande a été acceptée. Vous pouvez régler votre course en ligne de façon sécurisée.`
+    : `Bonjour,<br/><br/>Votre demande a été acceptée. Vous pouvez régler votre course en ligne de façon sécurisée.`;
 
-  const refBlock = opts.leadReference
-    ? `<tr><td style="padding:0 24px 12px;font-size:13px;color:${THEME.textMuted};text-align:center">Reference : <strong style="color:${THEME.text}">${esc(opts.leadReference)}</strong></td></tr>`
-    : "";
+  const amountBlock = amountHeroHtml("Montant à régler", opts.paymentAmountFormatted);
 
-  const amountBlock = `<tr><td style="padding:0 24px 22px;text-align:center">
-    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Montant a regler</div>
-    <div style="font-size:32px;font-weight:800;color:${THEME.text};line-height:1.2">${esc(opts.paymentAmountFormatted)}</div>
+  const ctaRow = actionsRowHtml([buttonHtml("Payer en ligne", opts.checkoutUrl)], "center");
+
+  const stripeNote = `<tr><td class="px" style="padding:0 32px 14px;text-align:center">
+    <p class="t-soft" style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">🔒 Le paiement est sécurisé par Stripe.</p>
   </td></tr>`;
 
-  const ctaRow = `<tr><td style="padding:0 24px 22px;text-align:center">${buttonHtml(
-    "Payer en ligne",
-    opts.checkoutUrl
-  )}</td></tr>`;
-
-  const stripeNote = `<tr><td style="padding:0 24px 16px;text-align:center">
-    <p style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">Le paiement est securise par Stripe.</p>
-  </td></tr>`;
-
-  const fallbackBlock = `<tr><td style="padding:0 24px 22px">
-    <p style="margin:0;font-size:13px;line-height:1.7;color:${THEME.textMuted}">
+  const fallbackBlock = `<tr><td class="px" style="padding:0 32px 18px">
+    <p class="t-muted" style="margin:0;font-size:12px;line-height:1.7;color:${THEME.textMuted}">
       Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :<br/>
-      <span style="word-break:break-all;color:${THEME.text};font-weight:600">${esc(opts.checkoutUrl)}</span>
+      <span class="t-soft" style="word-break:break-all;color:${THEME.textSoft};font-weight:600">${esc(opts.checkoutUrl)}</span>
     </p>
   </td></tr>`;
 
-  const contactRows: RowDef[] = [];
-  if (opts.vtcPhone?.trim()) {
-    contactRows.push({
-      key: "vtc-tel",
-      label: "Telephone",
-      value: opts.vtcPhone.trim(),
-      section: "meta",
-    });
-  }
-  if (opts.vtcEmail?.trim()) {
-    contactRows.push({
-      key: "vtc-mail",
-      label: "E-mail",
-      value: opts.vtcEmail.trim(),
-      section: "meta",
-    });
-  }
-  const contactHtml = cardSectionHtml("Contact", contactRows);
+  const contactHtml = cardSectionHtml("Contact", contactRowsOf(opts.vtcPhone, opts.vtcEmail));
 
-  const bodyBlocks = `${refBlock}${amountBlock}${ctaRow}${stripeNote}${fallbackBlock}${contactHtml}`;
+  const bodyBlocks = `${amountBlock}${ctaRow}${stripeNote}${fallbackBlock}${contactHtml}`;
 
   const html = shellHtml({
-    preheader: `${subject} — ${brand}`,
+    preheader: `${subject} - ${brand}`,
     brand,
     badge: badgeHtml("Paiement en ligne", "success"),
-    title: "Reglement de votre course",
+    reference: opts.leadReference.length > 14 ? `${opts.leadReference.slice(0, 8)}…` : opts.leadReference,
+    title: "Règlement de votre course",
     intro: greetingHtml,
     bodyBlocks,
     footerSite: site,
-    footerText: `${brand} — Paiement en ligne`,
+    footerText: `${brand} - Paiement en ligne`,
   });
 
   const textLines: string[] = [
     name ? `Bonjour ${name},` : "Bonjour,",
     "",
-    "Votre demande a ete acceptee. Paiement en ligne.",
-    `Montant a regler : ${opts.paymentAmountFormatted}`,
+    "Votre demande a été acceptée. Paiement en ligne.",
+    `Montant à régler : ${opts.paymentAmountFormatted}`,
   ];
-  if (opts.leadReference) textLines.push(`Reference : ${opts.leadReference}`);
-  textLines.push("", `Payer en ligne : ${opts.checkoutUrl}`, "", "Le paiement est securise par Stripe.", "");
-  if (opts.vtcPhone?.trim()) textLines.push(`Telephone : ${opts.vtcPhone.trim()}`);
+  if (opts.leadReference) textLines.push(`Référence : ${opts.leadReference}`);
+  textLines.push("", `Payer en ligne : ${opts.checkoutUrl}`, "", "Le paiement est sécurisé par Stripe.", "");
+  if (opts.vtcPhone?.trim()) textLines.push(`Téléphone : ${opts.vtcPhone.trim()}`);
   if (opts.vtcEmail?.trim()) textLines.push(`E-mail : ${opts.vtcEmail.trim()}`);
   textLines.push("", brand, site);
 
@@ -910,65 +1150,31 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
     ? `Bonjour ${esc(name)},<br/><br/>Nous confirmons la réception de votre paiement.`
     : `Bonjour,<br/><br/>Nous confirmons la réception de votre paiement.`;
 
-  const refBlock = opts.leadReference
-    ? `<tr><td style="padding:0 24px 16px;font-size:13px;color:${THEME.textMuted};text-align:center">Référence demande : <strong style="color:${THEME.text}">${esc(opts.leadReference)}</strong></td></tr>`
-    : "";
+  const amountBlock = amountHeroHtml("Montant payé", opts.amountFormatted);
+  const tripBlock = tripBlockFromSummary(opts.tripSummary);
 
-  const amountBlock = `<tr><td style="padding:0 24px 22px;text-align:center">
-    <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Montant payé</div>
-    <div style="font-size:32px;font-weight:800;color:${THEME.text};line-height:1.2">${esc(opts.amountFormatted)}</div>
+  const stripeNote = `<tr><td class="px" style="padding:0 32px 14px;text-align:center">
+    <p class="t-soft" style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">🔒 Le paiement a été traité de manière sécurisée par Stripe.</p>
   </td></tr>`;
 
-  const tripBlock =
-    opts.tripSummary?.trim() ?
-      `<tr><td style="padding:0 24px 20px">
-        <div style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${THEME.accent};margin-bottom:10px">Votre course</div>
-        <p style="margin:0;font-size:14px;line-height:1.65;color:${THEME.text};word-break:break-word">${esc(opts.tripSummary.trim())}</p>
-      </td></tr>`
+  const receiptBlock = opts.receiptUrl?.trim()
+    ? actionsRowHtml([buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim(), "secondary")], "center")
     : "";
 
-  const stripeNote = `<tr><td style="padding:0 24px 18px;text-align:center">
-    <p style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">Le paiement a été traité de manière sécurisée par Stripe.</p>
-  </td></tr>`;
+  const contactHtml = cardSectionHtml("Contact", contactRowsOf(opts.vtcPhone, opts.vtcEmail));
 
-  const receiptBlock =
-    opts.receiptUrl?.trim() ?
-      `<tr><td style="padding:0 24px 22px;text-align:center">${buttonHtml(
-        "Voir le reçu Stripe",
-        opts.receiptUrl.trim()
-      )}</td></tr>`
-    : "";
-
-  const contactRows: RowDef[] = [];
-  if (opts.vtcPhone?.trim()) {
-    contactRows.push({
-      key: "vtc-tel",
-      label: "Téléphone",
-      value: opts.vtcPhone.trim(),
-      section: "meta",
-    });
-  }
-  if (opts.vtcEmail?.trim()) {
-    contactRows.push({
-      key: "vtc-mail",
-      label: "E-mail",
-      value: opts.vtcEmail.trim(),
-      section: "meta",
-    });
-  }
-  const contactHtml = cardSectionHtml("Contact", contactRows);
-
-  const bodyBlocks = `${refBlock}${amountBlock}${tripBlock}${stripeNote}${receiptBlock}${contactHtml}`;
+  const bodyBlocks = `${amountBlock}${tripBlock}${stripeNote}${receiptBlock}${contactHtml}`;
 
   const html = shellHtml({
-    preheader: `${subject} — ${commercialName}`,
+    preheader: `${subject} - ${commercialName}`,
     brand: commercialName,
     badge: badgeHtml("Paiement reçu", "success"),
+    reference: opts.leadReference.length > 14 ? `${opts.leadReference.slice(0, 8)}…` : opts.leadReference,
     title: "Merci pour votre règlement",
     intro: greetingHtml,
     bodyBlocks,
     footerSite: site,
-    footerText: `${commercialName} — Confirmation de paiement`,
+    footerText: `${commercialName} - Confirmation de paiement`,
   });
 
   const textLines: string[] = [
@@ -1002,16 +1208,16 @@ export function buildPaymentConfirmationOperatorEmail(opts: {
   const site = publicSiteUrl(opts.tenant);
   const subject = "Paiement reçu — demande VTC";
 
-  const intro =
-    "Un paiement a été reçu pour une demande. Les détails sont récapitulés ci-dessous.";
+  const intro = "Un paiement a été reçu pour une demande. Les détails sont récapitulés ci-dessous.";
 
   const html = shellHtml({
-    preheader: `${subject} — ${commercialName}`,
+    preheader: `${subject} - ${commercialName}`,
     brand: commercialName,
     badge: badgeHtml("Encaissement", "success"),
+    reference: opts.leadReference.length > 14 ? `${opts.leadReference.slice(0, 8)}…` : opts.leadReference,
     title: "Paiement confirmé",
     intro,
-    bodyBlocks: cardSectionHtml("Détail", [
+    bodyBlocks: `${amountHeroHtml("Montant payé", opts.amountFormatted)}${cardSectionHtml("Détail", [
       {
         key: "ref",
         label: "Référence demande",
@@ -1025,24 +1231,18 @@ export function buildPaymentConfirmationOperatorEmail(opts: {
         section: "client",
       },
       {
-        key: "amount",
-        label: "Montant payé",
-        value: opts.amountFormatted,
-        section: "pricing",
-      },
-      {
         key: "mode",
         label: "Mode de paiement",
         value: opts.paymentModeLabel,
         section: "pricing",
       },
-    ]),
-    cta:
-      [opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : "", opts.receiptUrl?.trim() ? buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim()) : ""]
-        .filter(Boolean)
-        .join(`<span style="display:inline-block;width:14px"></span>`) || undefined,
+    ])}`,
+    actionsTop: [
+      opts.proUrl ? buttonHtml("Voir la demande", opts.proUrl) : "",
+      opts.receiptUrl?.trim() ? buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim(), "secondary") : "",
+    ],
     footerSite: site,
-    footerText: "Notification opérateur — paiement",
+    footerText: "Notification opérateur - paiement",
   });
 
   const text = [
