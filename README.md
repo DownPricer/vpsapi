@@ -5,7 +5,39 @@ API HTTP **multi-locataire** pour centraliser la logique métier des sites VTC (
 ## Prérequis
 
 - Node.js 20+
-- Variables d’environnement : copier `.env.example` vers `.env` et adapter.
+- PostgreSQL (Prisma)
+- Variables d’environnement : créer un fichier `.env` à la racine (voir ci-dessous).
+
+## Variables d’environnement
+
+Ne jamais committer le `.env`. En production, définir des secrets forts (les valeurs par défaut `dev-*-change-me` sont réservées au développement).
+
+| Variable | Obligatoire | Rôle |
+|----------|-------------|------|
+| `DATABASE_URL` | oui | Connexion PostgreSQL (Prisma) |
+| `NODE_ENV` | non | `development` (défaut) ou `production` ; les routes de debug ne répondent qu’en `development` |
+| `PORT` | non | Port HTTP (défaut `4000`) |
+| `CORS_ORIGINS` | non | Origines autorisées, séparées par des virgules (vide = toutes en dev) |
+| `DEFAULT_TENANT_ID` | non | Locataire utilisé sans en-tête `X-Tenant-ID` (défaut `default`) |
+| `DISTANCE_MATRIX_API_KEY` | pour `/api/calculer-tarif` | Clé DistanceMatrix.ai |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | oui en prod | Secrets des jetons opérateur |
+| `JWT_ACCESS_TTL_SEC` / `JWT_REFRESH_TTL_SEC` | non | Durées de vie des jetons (défaut 900 s / 14 jours) |
+| `DASHBOARD_BASE_URL` | non | URL du tableau de bord opérateur, utilisée dans les e-mails |
+| `PUBLIC_SITE_URL` | non | URL publique du site, utilisée dans les e-mails |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | pour l’envoi d’e-mails | Serveur SMTP |
+| `SMTP_SECURE` / `SMTP_TLS_REJECT_UNAUTHORIZED` | non | Options TLS |
+| `MAIL_FROM` / `MAIL_REPLY_TO` / `MAIL_TO_COPY` | non | Expéditeur, réponse, copie des e-mails |
+| `STRIPE_SECRET_KEY` | pour les paiements | Clé secrète Stripe |
+| `STRIPE_WEBHOOK_SECRET` | pour les paiements | Secret de signature du webhook Stripe |
+| `STRIPE_CONNECT_RETURN_URL` / `STRIPE_CONNECT_REFRESH_URL` | non | Retours de l’onboarding Stripe Connect |
+| `STRIPE_PAYMENT_SUCCESS_URL` / `STRIPE_PAYMENT_CANCEL_URL` | non | Retours du paiement |
+| `PLATFORM_ADMIN_ENABLED` | non | Active le super-admin plateforme (défaut `false`) |
+| `PLATFORM_SESSION_SECRET` | si super-admin | Secret de session du super-admin |
+| `TELEMETRY_ENABLED` | non | Active la télémétrie plateforme (défaut `false`) |
+| `PRICING_DEBUG_SECRET` | non | Secret d’accès au debug de tarification |
+| `SEED_OPERATOR_TENANT_ID` / `SEED_OPERATOR_EMAIL` / `SEED_OPERATOR_PASSWORD` | non | Création de l’opérateur initial au démarrage |
+
+Les scripts d’exploitation (`src/scripts/`) lisent en plus `RESTORE_*`, `REPAIR_*`, `ENSURE_OPERATOR_MODE` et `TEST_EMAIL_TO`.
 
 ## Démarrage
 

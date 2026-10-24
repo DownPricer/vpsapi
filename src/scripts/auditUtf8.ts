@@ -12,7 +12,6 @@ const SOURCE_EXTENSIONS = new Set([
   ".md",
   ".css",
   ".html",
-  ".env.example",
 ]);
 
 const IGNORED_DIRS = new Set([
@@ -35,7 +34,6 @@ const INTENTIONAL_PATTERN_FILES = [
 function shouldScanFile(path: string): boolean {
   if (path.endsWith("package-lock.json")) return false;
   if (INTENTIONAL_PATTERN_FILES.some((file) => path.endsWith(file))) return false;
-  if (path.endsWith(".env.example")) return true;
   const idx = path.lastIndexOf(".");
   return idx >= 0 && SOURCE_EXTENSIONS.has(path.slice(idx));
 }
