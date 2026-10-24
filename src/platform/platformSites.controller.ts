@@ -5,6 +5,7 @@ import { auditTenantContent } from "./auditTenantContent";
 import { computeSitePlan } from "./sitePlan";
 import { resolveTenantUrls } from "./resolveTenantUrls";
 import { getUsagePeriodsByTenant, getUsageSummariesByTenant } from "./apiUsage";
+import { COLLECTED_PAYMENT_STATUSES, isCollectedStatus } from "../services/paymentStatuses";
 
 function safeString(v: unknown, max = 200): string | null {
   if (typeof v !== "string") return null;
@@ -134,7 +135,7 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
     });
     const payPaidAll = await prisma.payment.groupBy({
       by: ["tenantId"],
-      where: { status: "PAID" },
+      where: { status: { in: COLLECTED_PAYMENT_STATUSES } },
       _sum: { amount: true },
     });
 
@@ -192,7 +193,7 @@ export async function getPlatformSites(req: Request, res: Response, next: NextFu
     const payMap = new Map<string, { paid: number; failed: number; amountPaidCents: number }>();
     for (const r of payAgg) {
       const cur = payMap.get(r.tenantId) ?? { paid: 0, failed: 0, amountPaidCents: 0 };
-      if (r.status === "PAID") {
+      if (isCollectedStatus(r.status)) {
         cur.paid += r._count._all;
         cur.amountPaidCents += r._sum.amount ?? 0;
       } else if (r.status === "FAILED") {
@@ -517,7 +518,7 @@ export async function getPlatformSiteMetrics(req: Request, res: Response, next: 
       prisma.payment.aggregate({
         where: {
           tenantId,
-          status: "PAID",
+          status: { in: COLLECTED_PAYMENT_STATUSES },
           ...(from ? { paidAt: { gte: from, lte: to } } : {}),
         },
         _count: { _all: true },

@@ -6,6 +6,7 @@ import {
   buildOperatorDecisionEmail,
 } from "./formatLeadEmail";
 import { assertSmtpConnection, resolveMailFrom, sendSmtpMessage } from "./smtp";
+import { tryBuildManageUrl } from "../../services/bookingAccess.service";
 
 function meaningfulStr(value: unknown): boolean {
   if (value === null || value === undefined) return false;
@@ -140,7 +141,10 @@ export async function sendCustomerDecisionMail(params: {
   }
 
   const summaryLines = buildDecisionSummaryLines(lead);
+  const manageUrl =
+    lead.status === "accepted" && lead.kind === "reservation" ? await tryBuildManageUrl(tenant, lead) : null;
   const pkg = buildCustomerDecisionEmail({
+    manageUrl,
     tenant,
     kind: lead.kind === "devis" ? "devis" : "reservation",
     outcome: lead.status === "accepted" ? "accepted" : "refused",

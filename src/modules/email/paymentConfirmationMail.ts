@@ -13,6 +13,7 @@ import {
   resolveClientEmailForPaymentMail,
 } from "./paymentLinkMail";
 import { assertSmtpConnection, resolveMailFrom, sendSmtpMessage } from "./smtp";
+import { tryBuildManageUrl } from "../../services/bookingAccess.service";
 
 function formatAmountEur(amountCents: number): string {
   const euros = amountCents / 100;
@@ -64,7 +65,9 @@ export async function sendPaymentConfirmationToCustomer(params: {
     const connection = assertSmtpConnection();
     const from = resolveMailFrom(params.tenant);
     const greetingName = paymentLinkClientGreetingName(params.lead);
+    const manageUrl = await tryBuildManageUrl(params.tenant, params.lead);
     const pkg = buildPaymentConfirmationCustomerEmail({
+      manageUrl,
       tenant: params.tenant,
       clientName: greetingName || params.lead.clientName?.trim() || "",
       amountFormatted: formatAmountEur(params.payment.amount),

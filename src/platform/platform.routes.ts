@@ -4,6 +4,7 @@ import { getPlatformAdminMe } from "./platformAuth.controller";
 import { requirePlatformAdmin } from "./requirePlatformAdmin";
 import { getPlatformHealth, getPlatformOverview } from "./platformOverview.controller";
 import { getPlatformAlerts } from "./platformAlerts.controller";
+import { getPlatformRefundStats } from "./platformRefundStats.controller";
 import { getPlatformOverviewCharts, getPlatformSiteCharts } from "./platformCharts.controller";
 import { getPlatformSitePlan } from "./platformPlan.controller";
 import { getPlatformEventsGrouped } from "./platformEventsGrouped.controller";
@@ -42,6 +43,10 @@ export function createPlatformRouter(): Router {
 
   router.get("/overview/charts", requirePlatformAdmin, (req, res, next) => {
     void getPlatformOverviewCharts(req, res, next);
+  });
+
+  router.get("/stripe/refund-stats", requirePlatformAdmin, (req, res, next) => {
+    void getPlatformRefundStats(req, res, next);
   });
 
   router.get("/alerts", requirePlatformAdmin, (req, res, next) => {

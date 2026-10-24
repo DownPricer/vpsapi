@@ -4,6 +4,7 @@ import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { auditTenantContent } from "./auditTenantContent";
 import { computeSitePlan } from "./sitePlan";
+import { COLLECTED_PAYMENT_STATUSES, isCollectedStatus } from "../services/paymentStatuses";
 
 type Severity = "critique" | "warning" | "info";
 
@@ -87,7 +88,7 @@ export async function getPlatformAlerts(req: Request, res: Response, next: NextF
 
     const payPaidAgg = await prisma.payment.groupBy({
       by: ["tenantId"],
-      where: { tenantId: { in: tenantIds }, status: "PAID", paidAt: { gte: fromDate, lte: to } },
+      where: { tenantId: { in: tenantIds }, status: { in: COLLECTED_PAYMENT_STATUSES }, paidAt: { gte: fromDate, lte: to } },
       _count: { _all: true },
     });
     const payPaidMap = new Map<string, number>(payPaidAgg.map((r) => [r.tenantId, r._count._all]));

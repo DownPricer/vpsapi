@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { DateTime } from "luxon";
 import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates, type RangeKey } from "./platformQueries";
+import { COLLECTED_PAYMENT_STATUSES, isCollectedStatus } from "../services/paymentStatuses";
 
 type DayKey = string; // YYYY-MM-DD
 
@@ -49,7 +50,7 @@ async function queryRevenueByDay(params: { from: Date; to: Date; tenantId?: stri
       COALESCE(sum("amount"), 0)::bigint AS amount,
       COALESCE(sum("applicationFeeAmount"), 0)::bigint AS fee
     FROM "Payment"
-    WHERE "status" = 'PAID'
+    WHERE "status" IN ('PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING', 'REFUND_FAILED', 'REFUNDED')
       AND "paidAt" IS NOT NULL
       AND "paidAt" >= ${params.from} AND "paidAt" <= ${params.to}
       AND (${params.tenantId ?? null}::text IS NULL OR "tenantId" = ${params.tenantId ?? null})
@@ -138,7 +139,7 @@ export async function getPlatformOverviewCharts(req: Request, res: Response, nex
     // Top 5 sites (CA payé)
     const top = await prisma.payment.groupBy({
       by: ["tenantId"],
-      where: { status: "PAID", paidAt: { gte: fromDate, lte: to } },
+      where: { status: { in: COLLECTED_PAYMENT_STATUSES }, paidAt: { gte: fromDate, lte: to } },
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
       take: 5,

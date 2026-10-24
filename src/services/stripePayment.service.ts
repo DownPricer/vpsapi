@@ -10,6 +10,12 @@ import {
 import { prisma } from "../db/prisma";
 import { getStripeClient, isStripeConfigured } from "./stripe/stripeClient";
 import { trackPlatformEvent } from "../platform/telemetry.service";
+import {
+  buildPolicySnapshot,
+  parseStoredPolicy,
+  parseStoredSnapshot,
+  policyCheckoutMessage,
+} from "./cancellationPolicy";
 
 export class PaymentLinkError extends Error {
   readonly code: string;
@@ -28,6 +34,7 @@ const MIN_CHARGE_CENTS = 50;
 const LEAD_STATUSES_BLOCKED_FOR_PAYMENT: LeadStatus[] = [
   LeadStatus.refused,
   LeadStatus.cancelled,
+  LeadStatus.cancellation_requested,
   LeadStatus.expired,
   LeadStatus.archived,
 ];
@@ -264,6 +271,12 @@ export class StripePaymentService {
       );
     }
 
+    // Conditions d'annulation figées au moment du paiement : celles déjà acceptées à la réservation priment,
+    // sinon la version en vigueur. Jamais appliquées rétroactivement à d'anciennes réservations.
+    const leadSnapshot = parseStoredSnapshot(lead.cancellationPolicySnapshot);
+    const policySnapshot =
+      leadSnapshot ?? buildPolicySnapshot(parseStoredPolicy(tenant.cancellationPolicy), "payment");
+
     const now = new Date();
     const openLink = await prisma.payment.findFirst({
       where: {
@@ -319,6 +332,7 @@ export class StripePaymentService {
         applicationFeeAmount,
         stripeAccountId: tenant.stripeAccountId,
         metadata: metadataSnapshot,
+        ...(policySnapshot ? { cancellationPolicySnapshot: policySnapshot as unknown as Prisma.InputJsonValue } : {}),
       },
     });
 
@@ -341,6 +355,9 @@ export class StripePaymentService {
           ],
           success_url: successUrl,
           cancel_url: cancelUrl,
+          ...(policySnapshot
+            ? { custom_text: { submit: { message: policyCheckoutMessage(policySnapshot.policy) } } }
+            : {}),
           metadata: {
             tenantId: input.tenantId,
             leadRequestId: input.leadRequestId,
@@ -378,6 +395,13 @@ export class StripePaymentService {
           "Session Checkout créée sans URL.",
           502
         );
+      }
+
+      if (policySnapshot && !leadSnapshot) {
+        await prisma.leadRequest.updateMany({
+          where: { id: lead.id, tenantId: input.tenantId, cancellationPolicySnapshot: { equals: Prisma.DbNull } },
+          data: { cancellationPolicySnapshot: policySnapshot as unknown as Prisma.InputJsonValue },
+        });
       }
 
       await prisma.$transaction([

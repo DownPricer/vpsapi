@@ -7,6 +7,8 @@ import { notifyPaymentConfirmedAfterWebhookTransition } from "../modules/email/p
 import { fetchStripeReceiptUrlForPaymentIntent } from "./stripe/stripeReceiptUrl";
 import { getStripeClient } from "./stripe/stripeClient";
 import { trackPlatformEvent } from "../platform/telemetry.service";
+import { getRefundService } from "./refundContainer";
+import { factsFromStripeAccount, resolveOnboardingEnum } from "./stripe/stripeAccountStatus";
 
 /** Formes minimales des objets Stripe (évite les types du constructeur exporté par défaut). */
 type StripeMetadata = Record<string, string> | null | undefined;
@@ -29,7 +31,10 @@ type PaymentIntentLike = {
 };
 
 export type StripeWebhookEventLike = {
+  id?: string;
   type: string;
+  /** Compte connecté à l'origine de l'événement (événements Connect). */
+  account?: string | null;
   data: { object: unknown };
 };
 
@@ -300,10 +305,97 @@ async function handlePaymentIntentFailed(pi: PaymentIntentLike): Promise<void> {
   });
 }
 
+function idOf(v: unknown): string | null {
+  if (typeof v === "string" && v.length > 0) return v;
+  if (v && typeof v === "object" && "id" in v && typeof (v as { id: unknown }).id === "string") {
+    return (v as { id: string }).id;
+  }
+  return null;
+}
+
+/** account.updated : aligne les drapeaux Stripe du tenant sur l'état réel du compte. */
+async function handleAccountUpdated(event: StripeWebhookEventLike): Promise<void> {
+  const obj = event.data.object as Record<string, unknown> | null;
+  const accountId = idOf(obj) ?? event.account ?? null;
+  if (!accountId || !obj) return;
+  if (event.account && event.account !== accountId) return; // incohérence : on ignore
+  const tenant = await prisma.tenant.findUnique({ where: { stripeAccountId: accountId }, select: { id: true } });
+  if (!tenant) return;
+  const facts = factsFromStripeAccount(obj as Parameters<typeof factsFromStripeAccount>[0]);
+  await prisma.tenant.update({
+    where: { id: tenant.id },
+    data: {
+      stripeChargesEnabled: facts.chargesEnabled,
+      stripePayoutsEnabled: facts.payoutsEnabled,
+      stripeDetailsSubmitted: facts.detailsSubmitted,
+      stripeOnboardingStatus: resolveOnboardingEnum(facts),
+    },
+  });
+}
+
+/**
+ * Événements de remboursement : on ne se fie pas à l'ordre d'arrivée ni au contenu de l'événement.
+ * Le paiement est retrouvé (compte connecté + PaymentIntent), puis ses remboursements sont relus sur Stripe.
+ */
+async function reconcileRefundsForIntent(event: StripeWebhookEventLike, paymentIntentId: string | null): Promise<void> {
+  if (!paymentIntentId) return;
+  let accountId = event.account ?? null;
+  if (!accountId) {
+    const p = await prisma.payment.findFirst({
+      where: { stripePaymentIntentId: paymentIntentId },
+      select: { stripeAccountId: true },
+    });
+    accountId = p?.stripeAccountId ?? null;
+  }
+  if (!accountId) return;
+  await getRefundService().reconcileByPaymentIntent({ accountId, paymentIntentId });
+}
+
+async function handleApplicationFeeRefunded(event: StripeWebhookEventLike): Promise<void> {
+  const fee = event.data.object as { charge?: unknown; account?: unknown } | null;
+  const chargeId = idOf(fee?.charge);
+  if (!chargeId) return;
+  const payment = await prisma.payment.findFirst({
+    where: { stripeChargeId: chargeId },
+    select: { stripePaymentIntentId: true, stripeAccountId: true },
+  });
+  if (payment?.stripePaymentIntentId) {
+    await getRefundService().reconcileByPaymentIntent({
+      accountId: payment.stripeAccountId,
+      paymentIntentId: payment.stripePaymentIntentId,
+    });
+    return;
+  }
+  const accountId = idOf(fee?.account) ?? event.account ?? null;
+  const stripe = getStripeClient();
+  if (!stripe || !accountId) return;
+  const charge = await stripe.charges.retrieve(chargeId, {}, { stripeAccount: accountId });
+  await reconcileRefundsForIntent({ ...event, account: accountId }, idOf(charge.payment_intent));
+}
+
 export async function processStripeWebhookEvent(
   event: StripeWebhookEventLike
 ): Promise<void> {
   switch (event.type) {
+    case "account.updated":
+      await handleAccountUpdated(event);
+      break;
+    case "refund.created":
+    case "refund.updated":
+    case "refund.failed":
+    case "charge.refund.updated": {
+      const refund = event.data.object as { payment_intent?: unknown } | null;
+      await reconcileRefundsForIntent(event, idOf(refund?.payment_intent));
+      break;
+    }
+    case "charge.refunded": {
+      const charge = event.data.object as { payment_intent?: unknown } | null;
+      await reconcileRefundsForIntent(event, idOf(charge?.payment_intent));
+      break;
+    }
+    case "application_fee.refunded":
+      await handleApplicationFeeRefunded(event);
+      break;
     case "checkout.session.completed": {
       const session = asCheckoutSession(event.data.object);
       if (session) await handleCheckoutSessionCompleted(session);

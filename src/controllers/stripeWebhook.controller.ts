@@ -5,9 +5,15 @@ import { getStripeClient } from "../services/stripe/stripeClient";
 import { processStripeWebhookEvent } from "../services/stripeWebhook.service";
 import { trackFromRequest } from "../platform/telemetry.service";
 
-function webhookSecret(): string | undefined {
-  const s = process.env.STRIPE_WEBHOOK_SECRET?.trim();
-  return s && s.length > 0 ? s : undefined;
+/**
+ * Secrets de signature acceptés : endpoint plateforme (STRIPE_WEBHOOK_SECRET) et endpoint
+ * « événements des comptes connectés » (STRIPE_CONNECT_WEBHOOK_SECRET), éventuellement séparés par des virgules.
+ */
+function webhookSecrets(): string[] {
+  return [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET]
+    .flatMap((v) => (v ?? "").split(","))
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0);
 }
 
 /**
@@ -18,8 +24,8 @@ export async function postStripeWebhook(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const secret = webhookSecret();
-  if (!secret) {
+  const secrets = webhookSecrets();
+  if (secrets.length === 0) {
     res.status(503).json({
       success: false,
       error: {
@@ -66,10 +72,16 @@ export async function postStripeWebhook(
     return;
   }
 
-  let event: ReturnType<typeof stripe.webhooks.constructEvent>;
-  try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, secret);
-  } catch {
+  let event: ReturnType<typeof stripe.webhooks.constructEvent> | undefined;
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, secret);
+      break;
+    } catch {
+      // essai avec le secret suivant
+    }
+  }
+  if (!event) {
     res.status(400).json({
       success: false,
       error: {
@@ -97,6 +109,7 @@ export async function postStripeWebhook(
       data: {
         stripeEventId: event.id,
         type: event.type,
+        stripeAccountId: event.account ?? null,
       },
     });
   } catch (e) {

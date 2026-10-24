@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { PaymentStatus } from "@prisma/client";
+import { isCollectedStatus } from "../services/paymentStatuses";
 import { prisma } from "../db/prisma";
 
 /**
@@ -47,7 +47,7 @@ export async function getPublicPaymentConfirmation(
       return;
     }
 
-    const confirmationPending = payment.status !== PaymentStatus.PAID;
+    const confirmationPending = !isCollectedStatus(payment.status);
 
     res.json({
       success: true,

@@ -2,6 +2,7 @@ import type { LeadKind, LeadRequest, LeadStatus, Prisma } from "@prisma/client";
 import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { trackPlatformEvent } from "../platform/telemetry.service";
+import { buildPolicySnapshot, parseStoredPolicy } from "./cancellationPolicy";
 
 export type CreateLeadInput = {
   tenantId: string;
@@ -21,9 +22,15 @@ export type CreateLeadInput = {
 
 export class RequestService {
   async createLead(input: CreateLeadInput) {
+    // Version des conditions d'annulation en vigueur à la réservation (conservée telle quelle ensuite).
+    const tenantRow = await prisma.tenant
+      .findUnique({ where: { id: input.tenantId }, select: { cancellationPolicy: true } })
+      .catch(() => null);
+    const policySnapshot = buildPolicySnapshot(parseStoredPolicy(tenantRow?.cancellationPolicy ?? null), "reservation");
     const created = await prisma.leadRequest.create({
       data: {
         ...input,
+        ...(policySnapshot ? { cancellationPolicySnapshot: policySnapshot as unknown as Prisma.InputJsonValue } : {}),
         rawPayload: input.rawPayload as Prisma.InputJsonValue,
         flatPayload: input.flatPayload as Prisma.InputJsonValue,
         ...(input.pricingResult !== undefined
@@ -133,7 +140,29 @@ export class RequestService {
             checkoutExpiresAt: true,
             paidAt: true,
             createdAt: true,
+            applicationFeeAmount: true,
+            refundedAmount: true,
+            applicationFeeRefundedAmount: true,
+            refunds: {
+              orderBy: { createdAt: "desc" },
+              take: 20,
+              select: {
+                id: true,
+                amount: true,
+                currency: true,
+                status: true,
+                reason: true,
+                failureReason: true,
+                initiatedBy: true,
+                createdAt: true,
+              },
+            },
           },
+        },
+        cancellationRequests: {
+          orderBy: { requestedAt: "desc" },
+          take: 1,
+          select: { id: true, status: true, reason: true, requestedAt: true, resolvedAt: true, resolutionNote: true },
         },
       },
     });

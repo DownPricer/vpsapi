@@ -290,6 +290,7 @@ export function renderAdminAppPage(): string {
           <a id="nav-sites" href="#/sites"><span data-i="globe"></span>Sites</a>
           <a id="nav-domains" href="#/domains"><span data-i="radar"></span>Sites détectés</a>
           <a id="nav-events" href="#/events"><span data-i="pulse"></span>Activité</a>
+          <a id="nav-refunds" href="#/refunds"><span data-i="card"></span>Paiements &amp; remboursements</a>
           <a id="nav-health" href="#/health"><span data-i="shield"></span>Santé &amp; alertes<span class="count" id="navAlertCount" style="display:none"></span></a>
         </nav>
       </div>
@@ -312,6 +313,8 @@ export function renderAdminAppPage(): string {
 
       <div class="content">
         <section id="view-overview" style="display:none"></section>
+
+        <section id="view-refunds" style="display:none"></section>
 
         <section id="view-sites" style="display:none">
           <div class="pill-row" id="siteFilters" style="margin-bottom:14px">
@@ -483,9 +486,9 @@ export function renderAdminAppPage(): string {
     const priorityBadge = (p) => p==='critique'?badge('Critique','bad'):p==='important'?badge('Important','warn'):p==='moyen'?badge('Moyen','info'):badge('Faible','ok');
     const sevKind = (s) => s==='critique'?'bad':s==='warning'?'warn':'ok';
 
-    function setNavActive(key){ ['overview','sites','domains','events','health'].forEach(k => { const el=$('nav-'+k); if (el) el.classList.toggle('active', k===key); }); }
+    function setNavActive(key){ ['overview','sites','domains','events','health','refunds'].forEach(k => { const el=$('nav-'+k); if (el) el.classList.toggle('active', k===key); }); }
     function setPage(title, subtitle){ $('pageTitle').textContent = title; $('pageSubtitle').textContent = subtitle || ''; document.title = title + ' · Cockpit'; }
-    function show(view){ ['view-overview','view-sites','view-domains','view-events','view-health','view-site'].forEach(id => { const el=$(id); if(el) el.style.display = (id===view?'':'none'); }); }
+    function show(view){ ['view-overview','view-sites','view-domains','view-events','view-health','view-site','view-refunds'].forEach(id => { const el=$(id); if(el) el.style.display = (id===view?'':'none'); }); }
     function skeleton(el, n){ el.innerHTML = '<div class="grid">'+Array.from({length:n||4}).map(()=>'<div class="col-3"><div class="skeleton"></div></div>').join('')+'</div>'; }
 
     const EV = {
@@ -663,6 +666,30 @@ export function renderAdminAppPage(): string {
       '</div>';
     }
 
+    /* ───────────────────── Paiements & remboursements (lecture seule) ───────────────────── */
+    async function viewRefunds(){
+      setNavActive('refunds');
+      setPage('Paiements & remboursements', 'Brut, remboursé, net et commissions par site — sur '+RANGE_LABEL[state.range].toLowerCase()+'. Lecture seule.');
+      const root = $('view-refunds'); skeleton(root, 6);
+      const data = await api('/api/platform/stripe/refund-stats?range='+encodeURIComponent(state.range)); if (!data) return;
+      const t = data.totals || {}; const rows = data.items || [];
+      const tiles = [
+        kpi({ label:'CA brut encaissé', value:fmtCents(t.grossCents||0), ico:'euro', tone:'ok', meta:'<span>'+fmtInt(t.paymentsCount||0)+' paiement(s)</span>' }),
+        kpi({ label:'Remboursé', value:fmtCents(t.refundedCents||0), ico:'card', tone:(t.refundedCents?'warn':'ok'), meta:'<span>'+fmtInt(t.refundsCount||0)+' remboursement(s) confirmé(s)</span>' }),
+        kpi({ label:'CA net', value:fmtCents(t.netRevenueCents||0), ico:'euro', tone:'info', meta:'<span>brut − remboursé</span>' }),
+        kpi({ label:'Commissions nettes', value:fmtCents(t.commissionNetCents||0), ico:'euro', tone:'ok', meta:'<span>'+fmtCents(t.commissionCollectedCents||0)+' encaissées · '+fmtCents(t.commissionRefundedCents||0)+' restituées</span>' }),
+        kpi({ label:'En attente', value:fmtInt(t.refundsPendingCount||0), ico:'pulse', tone:(t.refundsPendingCount?'warn':'ok'), meta:'<span>remboursements non confirmés</span>' }),
+        kpi({ label:'Échoués', value:fmtInt(t.refundsFailedCount||0), ico:'shield', tone:(t.refundsFailedCount?'bad':'ok'), meta:'<span>à reprendre par le chauffeur</span>' }),
+      ].join('');
+      const table = rows.length === 0 ? '<div class="card">'+emptyBox('Aucun paiement sur la période')+'</div>' :
+        '<div class="table-wrap"><table class="table"><thead><tr><th>Site</th><th class="right">Paiements</th><th class="right">Brut</th><th class="right">Remboursé</th><th class="right">Net</th><th class="right">Remb.</th><th class="right">En attente</th><th class="right">Échoués</th><th class="right">Commissions encaissées</th><th class="right">Restituées</th><th class="right">Nettes</th></tr></thead><tbody>' +
+        rows.map(r => '<tr><td><div class="strong">'+safe(r.tenantName)+'</div><div class="muted mono">'+safe(r.tenantId)+'</div></td>' +
+          '<td class="right">'+fmtInt(r.paymentsCount)+'</td><td class="right strong">'+fmtCents(r.grossCents)+'</td><td class="right">'+fmtCents(r.refundedCents)+'</td><td class="right strong">'+fmtCents(r.netRevenueCents)+'</td>' +
+          '<td class="right">'+fmtInt(r.refundsCount)+'</td><td class="right">'+(r.refundsPendingCount?badge(String(r.refundsPendingCount),'warn'):'0')+'</td><td class="right">'+(r.refundsFailedCount?badge(String(r.refundsFailedCount),'bad'):'0')+'</td>' +
+          '<td class="right">'+fmtCents(r.commissionCollectedCents)+'</td><td class="right">'+fmtCents(r.commissionRefundedCents)+'</td><td class="right strong">'+fmtCents(r.commissionNetCents)+'</td></tr>').join('') + '</tbody></table></div>';
+      root.innerHTML = '<div class="grid">'+tiles+'</div><div style="height:14px"></div>'+table;
+    }
+
     /* ───────────────────────── Sites ───────────────────────── */
     async function viewSites(){
       setNavActive('sites'); setPage('Sites', 'Statut, contenu, Stripe, performance et usage de chaque site client.');
@@ -836,6 +863,7 @@ export function renderAdminAppPage(): string {
         else if (page === 'site'){ show('view-site'); await viewSite(parts[1]||''); }
         else if (page === 'events'){ show('view-events'); await viewEvents(); }
         else if (page === 'health'){ show('view-health'); await viewHealth(); }
+        else if (page === 'refunds'){ show('view-refunds'); await viewRefunds(); }
         else window.location.hash = '#/overview';
         window.scrollTo({ top:0 });
       } catch (e) { toast(e && e.message ? e.message : 'Erreur de chargement'); }

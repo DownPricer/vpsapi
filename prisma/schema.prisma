@@ -34,6 +34,7 @@ enum LeadStatus {
   completed
   cancelled
   expired
+  cancellation_requested
 }
 
 enum StripeOnboardingStatus {
@@ -65,6 +66,9 @@ enum PaymentStatus {
   EXPIRED
   REFUNDED
   CANCELLED
+  REFUND_PENDING
+  PARTIALLY_REFUNDED
+  REFUND_FAILED
 }
 
 enum PlatformAdminRole {
@@ -82,6 +86,31 @@ enum LeadPaymentStatus {
   EXPIRED
   REFUNDED
   CANCELLED
+  REFUND_PENDING
+  PARTIALLY_REFUNDED
+  REFUND_FAILED
+}
+
+/// Statut d'un remboursement Stripe (miroir de Refund.status).
+enum RefundStatus {
+  PENDING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum RefundInitiator {
+  OPERATOR
+  STRIPE_DASHBOARD
+  SYSTEM
+}
+
+enum CancellationRequestStatus {
+  PENDING
+  ACCEPTED
+  REFUSED
+  MANUAL
 }
 
 enum TenantDomainStatus {
@@ -122,6 +151,8 @@ model Tenant {
   paymentCurrency              String                 @default("eur")
   /// Commission plateforme en centimes (ex. 500 = 5 €). Non modifiable par le VTC via l’API publique.
   platformApplicationFeeAmount Int                    @default(500)
+  /// Politique d'annulation configurable par le VTC (JSON validé côté API, aucune donnée sensible).
+  cancellationPolicy           Json?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
   users                        OperatorUser[]
@@ -130,6 +161,9 @@ model Tenant {
   authSessions                 AuthSession[]
   payments                     Payment[]
   domains                      TenantDomain[]
+  paymentRefunds               PaymentRefund[]
+  cancellationRequests         CancellationRequest[]
+  bookingAccessTokens          BookingAccessToken[]
 }
 
 model TenantDomain {
@@ -168,7 +202,7 @@ model OperatorUser {
 }
 
 model LeadRequest {
-  id                            String              @id @default(cuid())
+  id                            String                @id @default(cuid())
   tenantId                      String
   kind                          LeadKind
   status                        LeadStatus
@@ -190,14 +224,21 @@ model LeadRequest {
   customerDecisionMailSentAt    DateTime?
   customerDecisionMailLastError String?
   /// Miroir simple pour l’UI ; source de vérité : enregistrements Payment.
-  paymentStatus                 LeadPaymentStatus   @default(NONE)
+  paymentStatus                 LeadPaymentStatus     @default(NONE)
   /// Souhaite recevoir un lien de paiement en ligne après acceptation (formulaires publics).
-  clientWantsOnlinePayment      Boolean             @default(false)
-  createdAt                     DateTime            @default(now())
-  updatedAt                     DateTime            @updatedAt
-  tenant                        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientWantsOnlinePayment      Boolean               @default(false)
+  /// Version de la politique d'annulation en vigueur à la réservation (jamais réécrite rétroactivement).
+  cancellationPolicySnapshot    Json?
+  cancelledAt                   DateTime?
+  cancellationReason            String?
+  createdAt                     DateTime              @default(now())
+  updatedAt                     DateTime              @updatedAt
+  tenant                        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   history                       LeadStatusHistory[]
   payments                      Payment[]
+  paymentRefunds                PaymentRefund[]
+  cancellationRequests          CancellationRequest[]
+  bookingAccessTokens           BookingAccessToken[]
 
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, kind, status])
@@ -205,45 +246,139 @@ model LeadRequest {
 }
 
 model Payment {
-  id                      String          @id @default(cuid())
-  tenantId                String
-  leadRequestId           String
-  status                  PaymentStatus   @default(PENDING)
-  provider                PaymentProvider @default(STRIPE)
-  mode                    PaymentMode
+  id                           String          @id @default(cuid())
+  tenantId                     String
+  leadRequestId                String
+  status                       PaymentStatus   @default(PENDING)
+  provider                     PaymentProvider @default(STRIPE)
+  mode                         PaymentMode
   /// Montant facturé au client, en centimes.
-  amount                  Int
-  currency                String
+  amount                       Int
+  currency                     String
   /// Commission plateforme en centimes, figée à la création.
-  applicationFeeAmount    Int
+  applicationFeeAmount         Int
   /// Compte connecté Stripe utilisé pour la transaction (acct_...).
-  stripeAccountId         String
-  stripeCheckoutSessionId String?         @unique
-  stripePaymentIntentId   String?         @unique
-  stripePaymentLinkUrl    String?
+  stripeAccountId              String
+  stripeCheckoutSessionId      String?         @unique
+  stripePaymentIntentId        String?         @unique
+  stripePaymentLinkUrl         String?
   /// URL du reçu hébergé par Stripe (Charge.receipt_url), si disponible.
-  stripeReceiptUrl        String?
-  checkoutExpiresAt       DateTime?
-  paidAt                  DateTime?
-  failedAt                DateTime?
-  refundedAt              DateTime?
-  metadata                Json?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  tenant                  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  leadRequest             LeadRequest     @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+  stripeReceiptUrl             String?
+  /// Charge Stripe (ch_...) sur le compte connecté, renseignée à la première opération de remboursement/synchro.
+  stripeChargeId               String?
+  /// Application fee Stripe (fee_...) liée à la charge (commission plateforme réelle).
+  stripeApplicationFeeId       String?
+  checkoutExpiresAt            DateTime?
+  paidAt                       DateTime?
+  failedAt                     DateTime?
+  refundedAt                   DateTime?
+  /// Cumul des remboursements Stripe confirmés (status succeeded), en centimes.
+  refundedAmount               Int             @default(0)
+  /// Cumul de commission plateforme restituée par Stripe, en centimes.
+  applicationFeeRefundedAmount Int             @default(0)
+  refundsSyncedAt              DateTime?
+  /// Politique d'annulation affichée au client au moment du paiement.
+  cancellationPolicySnapshot   Json?
+  metadata                     Json?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  tenant                       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadRequest                  LeadRequest     @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+  refunds                      PaymentRefund[]
 
   @@index([tenantId, leadRequestId])
   @@index([tenantId, createdAt(sort: Desc)])
 }
 
+/// Remboursement Stripe d'un paiement (direct charge sur compte connecté).
+model PaymentRefund {
+  id                           String          @id @default(cuid())
+  tenantId                     String
+  paymentId                    String
+  leadRequestId                String
+  /// Identifiant fourni par le client pour dédupliquer double clic / nouvel essai (unique par paiement).
+  clientRequestId              String
+  /// Clé d'idempotence Stripe persistante : réutilisée telle quelle à chaque nouvel essai.
+  idempotencyKey               String          @unique
+  stripeRefundId               String?         @unique
+  stripePaymentIntentId        String?
+  stripeChargeId               String?
+  stripeAccountId              String
+  /// Montant demandé, en centimes.
+  amount                       Int
+  currency                     String
+  status                       RefundStatus    @default(PENDING)
+  reason                       String?
+  reasonNote                   String?
+  failureReason                String?
+  initiatedBy                  RefundInitiator @default(OPERATOR)
+  initiatedByUserId            String?
+  /// Commission plateforme attendue (calcul proportionnel) au moment de la demande.
+  applicationFeeRefundExpected Int             @default(0)
+  /// Commission plateforme réellement restituée (lue sur Stripe après confirmation).
+  applicationFeeRefunded       Int             @default(0)
+  notifiedInitiatedAt          DateTime?
+  notifiedSucceededAt          DateTime?
+  notifiedFailedAt             DateTime?
+  lastSyncedAt                 DateTime?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  tenant                       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payment                      Payment         @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  leadRequest                  LeadRequest     @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, clientRequestId])
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([paymentId])
+  @@index([tenantId, status])
+}
+
+/// Demande d'annulation exprimée par le client via son lien sécurisé.
+model CancellationRequest {
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  leadRequestId      String
+  status             CancellationRequestStatus @default(PENDING)
+  reason             String
+  /// Statut de la demande avant la demande d'annulation (restauré si refus / traitement manuel).
+  previousLeadStatus LeadStatus
+  resolutionNote     String?
+  resolvedByUserId   String?
+  requestedAt        DateTime                  @default(now())
+  resolvedAt         DateTime?
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadRequest        LeadRequest               @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([leadRequestId])
+}
+
+/// Jeton d'accès client (hash SHA-256 uniquement) lié à une réservation, expirant.
+model BookingAccessToken {
+  id            String      @id @default(cuid())
+  tenantId      String
+  leadRequestId String
+  tokenHash     String      @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  lastUsedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadRequest   LeadRequest @relation(fields: [leadRequestId], references: [id], onDelete: Cascade)
+
+  @@index([leadRequestId])
+  @@index([expiresAt])
+}
+
 /// Événements Stripe déjà traités (idempotence webhook, clé = event.id Stripe evt_...).
 model StripeWebhookEvent {
-  id            String   @id @default(cuid())
-  stripeEventId String   @unique
-  type          String
-  processedAt   DateTime @default(now())
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  stripeEventId   String   @unique
+  /// Compte connecté à l'origine de l'événement (acct_...), si événement Connect.
+  stripeAccountId String?
+  type            String
+  processedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@index([type])
   @@index([processedAt])

@@ -66,6 +66,37 @@ export async function postProStripeOnboardingLink(
   }
 }
 
+/** POST /api/pro/stripe/login-link — lien Dashboard Express à usage unique, jamais stocké ni mis en cache. */
+export async function postProStripeLoginLink(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const tenantId = req.authUser?.tenantId;
+  if (!tenantId) {
+    unauthorized(res);
+    return;
+  }
+  try {
+    const { url } = await stripeConnectService.createTenantExpressLoginLink(tenantId);
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ success: true, data: { url } });
+  } catch (err) {
+    handleStripeConnectError(res, next, err);
+  }
+}
+
+/** GET /api/pro/stripe/overview — statut réel du compte + derniers paiements / remboursements. */
+export async function getProStripeOverview(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const tenantId = req.authUser?.tenantId;
+  if (!tenantId) {
+    unauthorized(res);
+    return;
+  }
+  try {
+    res.setHeader("Cache-Control", "no-store");
+    res.status(200).json({ success: true, data: await stripeConnectService.getTenantStripeOverview(tenantId) });
+  } catch (err) {
+    handleStripeConnectError(res, next, err);
+  }
+}
+
 export async function getProStripeStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
   const tenantId = req.authUser?.tenantId;
   if (!tenantId) {

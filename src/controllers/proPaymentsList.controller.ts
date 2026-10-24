@@ -3,6 +3,15 @@ import { PaymentStatus, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
 
+/** Paiements réellement encaissés (y compris ceux ensuite remboursés en tout ou partie). */
+const COLLECTED_STATUSES: PaymentStatus[] = [
+  PaymentStatus.PAID,
+  PaymentStatus.PARTIALLY_REFUNDED,
+  PaymentStatus.REFUND_PENDING,
+  PaymentStatus.REFUND_FAILED,
+  PaymentStatus.REFUNDED,
+];
+
 const querySchema = z.object({
   status: z.nativeEnum(PaymentStatus).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
@@ -69,6 +78,7 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
       items,
       total,
       aggPaid,
+      aggRefunded,
       pendingCheckoutCount,
       failedCount,
       expiredCount,
@@ -88,14 +98,21 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
           currency: true,
           stripeReceiptUrl: true,
           leadRequestId: true,
+          refundedAmount: true,
+          applicationFeeAmount: true,
+          applicationFeeRefundedAmount: true,
           leadRequest: { select: { clientName: true } },
         },
       }),
       prisma.payment.count({ where }),
       prisma.payment.aggregate({
-        where: { ...where, status: PaymentStatus.PAID },
+        where: { ...where, status: { in: COLLECTED_STATUSES } },
         _sum: { amount: true },
         _count: true,
+      }),
+      prisma.payment.aggregate({
+        where: { ...where, status: { in: COLLECTED_STATUSES } },
+        _sum: { refundedAmount: true },
       }),
       prisma.payment.count({
         where: {
@@ -110,7 +127,7 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
           SELECT date_trunc('month', "paidAt") AS ym, SUM(amount) AS total
           FROM "Payment"
           WHERE "tenantId" = ${tenantId}
-            AND status = 'PAID'
+            AND status IN ('PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING', 'REFUND_FAILED', 'REFUNDED')
             AND "paidAt" IS NOT NULL
             AND "paidAt" >= ${chartFrom}
           GROUP BY 1
@@ -136,12 +153,18 @@ export async function getProPaymentsList(req: Request, res: Response, next: Next
           amount: p.amount,
           currency: p.currency,
           stripeReceiptUrl: p.stripeReceiptUrl,
+          refundedAmount: p.refundedAmount,
+          refundableAmount: Math.max(0, p.amount - p.refundedAmount),
+          applicationFeeAmount: p.applicationFeeAmount,
+          applicationFeeRefundedAmount: p.applicationFeeRefundedAmount,
           leadRequestId: p.leadRequestId,
           clientName: p.leadRequest?.clientName ?? "",
         })),
         total,
         summary: {
           paidTotalCents: aggPaid._sum.amount ?? 0,
+          refundedTotalCents: aggRefunded._sum.refundedAmount ?? 0,
+          netTotalCents: (aggPaid._sum.amount ?? 0) - (aggRefunded._sum.refundedAmount ?? 0),
           paidCount: aggPaid._count,
           pendingCheckoutCount,
           failedCount,

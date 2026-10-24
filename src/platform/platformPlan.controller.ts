@@ -4,6 +4,7 @@ import { prisma } from "../db/prisma";
 import { auditTenantContent } from "./auditTenantContent";
 import { computeSitePlan } from "./sitePlan";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
+import { COLLECTED_PAYMENT_STATUSES, isCollectedStatus } from "../services/paymentStatuses";
 
 function detectPricingSuspect(settings: unknown): boolean {
   if (!settings || typeof settings !== "object" || Array.isArray(settings)) return false;
@@ -90,7 +91,7 @@ export async function getPlatformSitePlan(req: Request, res: Response, next: Nex
         where: { tenantId, createdAt: { gte: fromDate, lte: to }, emailError: { not: null } },
       }),
       prisma.payment.count({ where: { tenantId, status: "FAILED", createdAt: { gte: fromDate, lte: to } } }),
-      prisma.payment.count({ where: { tenantId, status: "PAID", paidAt: { gte: fromDate, lte: to } } }),
+      prisma.payment.count({ where: { tenantId, status: { in: COLLECTED_PAYMENT_STATUSES }, paidAt: { gte: fromDate, lte: to } } }),
       lastActivityForTenant(tenantId),
     ]);
 

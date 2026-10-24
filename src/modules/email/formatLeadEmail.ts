@@ -814,6 +814,23 @@ function tripBlockFromSummary(summary: string | null | undefined): string {
   return commentCardHtml("Votre course", text);
 }
 
+/** Briques HTML partagées avec les e-mails d'annulation / remboursement (même habillage que les existants). */
+export type EmailRow = RowDef;
+export const emailKit = {
+  shellHtml,
+  badgeHtml,
+  amountHeroHtml,
+  cardSectionHtml,
+  commentCardHtml,
+  buttonHtml,
+  actionsRowHtml,
+  brandName,
+  publicSiteUrl,
+  contactRowsOf,
+  tripBlockFromSummary,
+  esc,
+};
+
 /* -------------------------------------------------------------------------- */
 /*  E-mails                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -937,6 +954,8 @@ export function buildCustomerDecisionEmail(opts: {
   recipientName: string;
   summaryLines: string[];
   operatorNote?: string | null;
+  /** Lien sécurisé « gérer ma réservation » (réservation acceptée uniquement). */
+  manageUrl?: string | null;
 }): { subject: string; html: string; text: string } {
   const brand = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
@@ -987,7 +1006,10 @@ export function buildCustomerDecisionEmail(opts: {
     title,
     intro,
     bodyBlocks,
-    actionsBottom: [buttonHtml(isAccepted ? "Visiter notre site" : "Nous contacter", site)],
+    actionsBottom: [
+      buttonHtml(isAccepted ? "Visiter notre site" : "Nous contacter", site),
+      isAccepted && opts.kind === "reservation" && opts.manageUrl ? buttonHtml("Gérer ma réservation", opts.manageUrl, "secondary") : "",
+    ],
     footerSite: site,
     footerText: `${brand} - Suivi de votre demande`,
   });
@@ -1001,6 +1023,7 @@ export function buildCustomerDecisionEmail(opts: {
       : "Nous ne pouvons pas donner suite à votre demande dans les conditions actuelles.",
     opts.operatorNote && isMeaningfulValue(opts.operatorNote) && !isAccepted ? `\nMessage :\n${opts.operatorNote.trim()}` : "",
     usefulLines.length ? `\nRécapitulatif :\n${usefulLines.join("\n")}` : "",
+    isAccepted && opts.kind === "reservation" && opts.manageUrl ? `\nGérer ma réservation (annulation) : ${opts.manageUrl}` : "",
     "",
     brand,
     site,
@@ -1141,6 +1164,7 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
   vtcPhone?: string | null;
   vtcEmail?: string | null;
   receiptUrl?: string | null;
+  manageUrl?: string | null;
 }): { subject: string; html: string; text: string } {
   const commercialName = brandName(opts.tenant);
   const site = publicSiteUrl(opts.tenant);
@@ -1157,9 +1181,13 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
     <p class="t-soft" style="margin:0;font-size:13px;line-height:1.6;color:${THEME.textSoft}">🔒 Le paiement a été traité de manière sécurisée par Stripe.</p>
   </td></tr>`;
 
-  const receiptBlock = opts.receiptUrl?.trim()
-    ? actionsRowHtml([buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim(), "secondary")], "center")
-    : "";
+  const receiptBlock = actionsRowHtml(
+    [
+      opts.receiptUrl?.trim() ? buttonHtml("Voir le reçu Stripe", opts.receiptUrl.trim(), "secondary") : "",
+      opts.manageUrl ? buttonHtml("Gérer ma réservation", opts.manageUrl, "secondary") : "",
+    ],
+    "center"
+  );
 
   const contactHtml = cardSectionHtml("Contact", contactRowsOf(opts.vtcPhone, opts.vtcEmail));
 
@@ -1187,6 +1215,7 @@ export function buildPaymentConfirmationCustomerEmail(opts: {
   if (opts.tripSummary?.trim()) textLines.push("", `Rappel trajet : ${opts.tripSummary.trim()}`);
   textLines.push("", "Le paiement a été traité de manière sécurisée par Stripe.", "");
   if (opts.receiptUrl?.trim()) textLines.push(`Reçu Stripe : ${opts.receiptUrl.trim()}`, "");
+  if (opts.manageUrl) textLines.push(`Gérer ma réservation (annulation) : ${opts.manageUrl}`, "");
   if (opts.vtcPhone?.trim()) textLines.push(`Téléphone : ${opts.vtcPhone.trim()}`);
   if (opts.vtcEmail?.trim()) textLines.push(`E-mail : ${opts.vtcEmail.trim()}`);
   textLines.push("", commercialName, site);

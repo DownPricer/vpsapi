@@ -3,6 +3,7 @@ import { prisma } from "../db/prisma";
 import { parseRangeKey, rangeToDates } from "./platformQueries";
 import { loadEnv } from "../config/env";
 import { getPlatformUsageSummary } from "./apiUsage";
+import { COLLECTED_PAYMENT_STATUSES, isCollectedStatus } from "../services/paymentStatuses";
 
 const isSet = (v: string | undefined): boolean => Boolean(v && v.trim());
 
@@ -67,10 +68,10 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
       prisma.tenant.count({ where: { active: true } }),
       prisma.leadRequest.count(),
       prisma.leadRequest.count({ where: from ? { createdAt: { gte: from, lte: to } } : {} }),
-      prisma.payment.count({ where: { status: "PAID" } }),
+      prisma.payment.count({ where: { status: { in: COLLECTED_PAYMENT_STATUSES } } }),
       prisma.payment.count({
         where: {
-          status: "PAID",
+          status: { in: COLLECTED_PAYMENT_STATUSES },
           ...(from ? { paidAt: { gte: from, lte: to } } : {}),
         },
       }),
@@ -94,10 +95,10 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
           const [leads, paidAgg, paid, emailsSent, emailsFailed] = await Promise.all([
             prisma.leadRequest.count({ where: { createdAt: { gte: prevFrom, lt: from } } }),
             prisma.payment.aggregate({
-              where: { status: "PAID", paidAt: { gte: prevFrom, lt: from } },
+              where: { status: { in: COLLECTED_PAYMENT_STATUSES }, paidAt: { gte: prevFrom, lt: from } },
               _sum: { amount: true, applicationFeeAmount: true },
             }),
-            prisma.payment.count({ where: { status: "PAID", paidAt: { gte: prevFrom, lt: from } } }),
+            prisma.payment.count({ where: { status: { in: COLLECTED_PAYMENT_STATUSES }, paidAt: { gte: prevFrom, lt: from } } }),
             prisma.leadRequest.count({ where: { createdAt: { gte: prevFrom, lt: from }, emailSentAt: { not: null } } }),
             prisma.leadRequest.count({ where: { createdAt: { gte: prevFrom, lt: from }, emailError: { not: null } } }),
           ]);
@@ -119,12 +120,12 @@ export async function getPlatformOverview(req: Request, res: Response, next: Nex
     ]);
 
     const revenuePaidTotalAgg = await prisma.payment.aggregate({
-      where: { status: "PAID" },
+      where: { status: { in: COLLECTED_PAYMENT_STATUSES } },
       _sum: { amount: true, applicationFeeAmount: true },
     });
     const revenuePaidInRangeAgg = await prisma.payment.aggregate({
       where: {
-        status: "PAID",
+        status: { in: COLLECTED_PAYMENT_STATUSES },
         ...(from ? { paidAt: { gte: from, lte: to } } : {}),
       },
       _sum: { amount: true, applicationFeeAmount: true },
