@@ -88,6 +88,9 @@ const FIELD_LABELS: Record<string, string> = {
   BagagesRetour: "Bagages retour",
   Commentaires: "Commentaire client",
   Observations: "Commentaire client",
+  Vehicule: "Véhicule",
+  TarifTrajet: "Tarif du trajet",
+  SupplementVehicule: "Supplément véhicule",
   TarifTotal: "Tarif total",
   "Payé": "Paiement reçu",
   Paye: "Paiement reçu",
@@ -129,6 +132,7 @@ const KEY_ORDER: Record<SectionId, string[]> = {
   trip: [
     "TypeService",
     "TypeTrajet",
+    "Vehicule",
     "RésuméTrajet",
     "ResumeTrajet",
     "DateAller",
@@ -161,7 +165,7 @@ const KEY_ORDER: Record<SectionId, string[]> = {
     "NombreInvites",
     "Options",
   ],
-  pricing: ["TarifTotal", "Payé", "Paye", "PaymentMethode"],
+  pricing: ["TarifTrajet", "SupplementVehicule", "TarifTotal", "Payé", "Paye", "PaymentMethode"],
   comment: ["Commentaires", "Observations"],
 };
 
@@ -299,7 +303,7 @@ function mapValue(key: string, rawValue: string): string {
   if (key === "Statut") return translateStatus(value);
   if (key === "PaymentMethode") return translatePaymentMethod(value);
   if (key === "Payé" || key === "Paye") return translateBooleanish(value);
-  if (key === "TarifTotal") return money(value);
+  if (key === "TarifTotal" || key === "TarifTrajet" || key === "SupplementVehicule") return money(value);
   if (key.startsWith("Date")) return formatDateValue(value);
   return value;
 }
@@ -307,7 +311,7 @@ function mapValue(key: string, rawValue: string): string {
 function sectionForKey(key: string): SectionId {
   if (["LeadId", "ID", "TypeDemande", "Statut"].includes(key)) return "meta";
   if (["Prenom", "Nom", "Telephone", "Email", "Societe", "NomSociete", "Organisation"].includes(key)) return "client";
-  if (["TarifTotal", "Payé", "Paye", "PaymentMethode"].includes(key)) return "pricing";
+  if (["TarifTrajet", "SupplementVehicule", "TarifTotal", "Payé", "Paye", "PaymentMethode"].includes(key)) return "pricing";
   if (["Commentaires", "Observations"].includes(key)) return "comment";
   return "trip";
 }

@@ -7,3 +7,6 @@ tmp/
 .DS_Store
 
 /src/generated/prisma
+
+# Photos de véhicules uploadées (UPLOADS_DIR par défaut)
+/uploads/

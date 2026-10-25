@@ -3,6 +3,7 @@ import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { trackPlatformEvent } from "../platform/telemetry.service";
 import { buildPolicySnapshot, parseStoredPolicy } from "./cancellationPolicy";
+import { isBlockingStatus, syncLeadOccupation } from "./vehicleAvailability.service";
 
 export type CreateLeadInput = {
   tenantId: string;
@@ -18,6 +19,9 @@ export type CreateLeadInput = {
   scheduledStart?: Date | null;
   scheduledEnd?: Date | null;
   clientWantsOnlinePayment?: boolean;
+  /** Véhicule choisi (référence + snapshot figé du nom, des caractéristiques et du supplément). */
+  vehicleId?: string;
+  vehicleSnapshot?: Prisma.InputJsonValue;
 };
 
 export class RequestService {
@@ -27,17 +31,25 @@ export class RequestService {
       .findUnique({ where: { id: input.tenantId }, select: { cancellationPolicy: true } })
       .catch(() => null);
     const policySnapshot = buildPolicySnapshot(parseStoredPolicy(tenantRow?.cancellationPolicy ?? null), "reservation");
-    const created = await prisma.leadRequest.create({
-      data: {
-        ...input,
-        ...(policySnapshot ? { cancellationPolicySnapshot: policySnapshot as unknown as Prisma.InputJsonValue } : {}),
-        rawPayload: input.rawPayload as Prisma.InputJsonValue,
-        flatPayload: input.flatPayload as Prisma.InputJsonValue,
-        ...(input.pricingResult !== undefined
-          ? { pricingResult: input.pricingResult as Prisma.InputJsonValue }
-          : {}),
-      },
-    });
+    const data: Prisma.LeadRequestUncheckedCreateInput = {
+      ...input,
+      ...(policySnapshot ? { cancellationPolicySnapshot: policySnapshot as unknown as Prisma.InputJsonValue } : {}),
+      rawPayload: input.rawPayload as Prisma.InputJsonValue,
+      flatPayload: input.flatPayload as Prisma.InputJsonValue,
+      ...(input.pricingResult !== undefined
+        ? { pricingResult: input.pricingResult as Prisma.InputJsonValue }
+        : {}),
+    };
+    // Les parcours publics créent toujours des demandes « en attente » (non bloquantes) ; une création directement
+    // confirmée (ex. saisie depuis l'espace pro) occupe le véhicule dans la MÊME transaction.
+    const created =
+      input.vehicleId && isBlockingStatus(input.status)
+        ? await prisma.$transaction(async (tx) => {
+            const row = await tx.leadRequest.create({ data });
+            await syncLeadOccupation(tx, row.id);
+            return row;
+          })
+        : await prisma.leadRequest.create({ data });
     await prisma.leadStatusHistory.create({
       data: {
         leadId: created.id,
@@ -190,23 +202,29 @@ export class RequestService {
 
     const previousStatus = lead.status;
     const now = new Date();
-    const updated = await prisma.leadRequest.update({
-      where: { id: lead.id },
-      data: {
-        status: params.nextStatus,
-        acceptedAt: params.nextStatus === "accepted" ? now : lead.acceptedAt,
-        refusedAt: params.nextStatus === "refused" ? now : lead.refusedAt,
-      },
-    });
-    await prisma.leadStatusHistory.create({
-      data: {
-        leadId: lead.id,
-        tenantId: lead.tenantId,
-        previousStatus: lead.status,
-        newStatus: params.nextStatus,
-        changedByUserId: params.changedByUserId,
-        note: params.note,
-      },
+    // Statut + historique + occupation du véhicule dans UNE transaction : si le véhicule est déjà pris ce jour-là
+    // (contrainte UNIQUE véhicule/jour), VehicleUnavailableError annule tout et le statut ne change pas.
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.leadRequest.update({
+        where: { id: lead.id },
+        data: {
+          status: params.nextStatus,
+          acceptedAt: params.nextStatus === "accepted" ? now : lead.acceptedAt,
+          refusedAt: params.nextStatus === "refused" ? now : lead.refusedAt,
+        },
+      });
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          tenantId: lead.tenantId,
+          previousStatus: lead.status,
+          newStatus: params.nextStatus,
+          changedByUserId: params.changedByUserId,
+          note: params.note,
+        },
+      });
+      await syncLeadOccupation(tx, lead.id);
+      return row;
     });
     return { ok: true, noop: false, lead: updated, previousStatus };
   }

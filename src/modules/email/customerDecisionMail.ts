@@ -1,3 +1,4 @@
+import { vehicleLabelFromFlat } from "../leads/vehicleLead";
 import type { LeadRequest } from "@prisma/client";
 import type { TenantConfig } from "../../types/tenant";
 import { prisma } from "../../db/prisma";
@@ -34,6 +35,17 @@ export function buildDecisionSummaryLines(lead: LeadRequest): string[] {
   lines.push(`Reference : ${lead.id}`);
   const trajet = pickFlat(flat, ["RésuméTrajet", "ResumeTrajet"]);
   if (trajet) lines.push(`Trajet : ${trajet}`);
+  const vehicule = vehicleLabelFromFlat(flat);
+  if (vehicule) {
+    const supplement = Number(String(flat.SupplementVehicule ?? "0").replace(",", "."));
+    lines.push(
+      `Véhicule : ${vehicule}${
+        supplement > 0
+          ? ` (dont supplément ${supplement.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} EUR)`
+          : ""
+      }`
+    );
+  }
   const tarif = pricing?.tarif;
   if (tarif !== undefined && tarif !== null && Number(tarif) > 0) {
     lines.push(

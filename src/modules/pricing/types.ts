@@ -1,4 +1,5 @@
 import type { DateTime } from "luxon";
+import type { VehicleSurchargeBasis } from "./vehicleSurcharge";
 
 export interface DistanceResult {
   km: number;
@@ -56,4 +57,10 @@ export type TarifResult = {
   distances: Distances;
   tarifs: Record<string, unknown>;
   majorations: Array<{ leg: string; montant: number }>;
+  /** Assiette du supplément véhicule, issue du même calcul que `tarif` (voir vehicleSurcharge.ts). */
+  vehicleBasis?: VehicleSurchargeBasis;
+  /** Tarif métier avant supplément véhicule (renseigné quand un véhicule est appliqué). */
+  tarifBase?: number;
+  /** Supplément et snapshot du véhicule appliqué (renseigné par applyVehicleToResult). */
+  vehicle?: import("./vehicleSurchargeApply").AppliedVehicleSnapshot;
 } & CreneauResult;

@@ -13,6 +13,8 @@ import {
   type PricingDebugBreakdown,
 } from "../modules/pricing/pricingDebugBreakdown";
 import type { Distances, TarifResult } from "../modules/pricing/types";
+import { applyVehicleToResult, type AppliedVehicleSnapshot } from "../modules/pricing/vehicleSurchargeApply";
+import { resolveVehicleForRequest, type SelectedVehicle } from "./vehicle.service";
 
 export type ServiceTypeKey = "classique" | "aeroport" | "mad-evenementiel";
 
@@ -42,6 +44,9 @@ export async function runPricingPipeline(
   pricingConfigSource: "tenant_engine" | "payload_pricing_config";
   pricingConfigVersion?: string;
   pricingDebug?: PricingDebugBreakdown;
+  /** Véhicule appliqué (null si le tenant n'a aucun véhicule actif : ancien comportement, sans supplément). */
+  vehicle: AppliedVehicleSnapshot | null;
+  selectedVehicle: SelectedVehicle | null;
 }> {
   const apiKey = requireDistanceMatrixKey();
   const typeKey = resolveServiceTypeKey(body);
@@ -49,10 +54,13 @@ export async function runPricingPipeline(
     const raw = (body?.general as Record<string, unknown>)?.TypeService;
     throw new Error(`Type de service inconnu : ${String(raw ?? "")}`);
   }
+  // Véhicule : vérifié AVANT tout appel réseau. Le navigateur n'envoie que `vehicleId` ; la vraie configuration vient de la base.
+  const selectedVehicle = await resolveVehicleForRequest(tenant.id, body);
   const resolvedPricing = resolvePricingEngineForRequest(tenant, body);
   const engine = resolvedPricing.engine;
   const distances = await calculerDistances(apiKey, body, engine, opts?.usageContext);
   const result = await calculerTarif(typeKey, body, distances, engine);
+  const vehicle = selectedVehicle ? applyVehicleToResult(result, selectedVehicle) : null;
   let pricingDebug: PricingDebugBreakdown | undefined;
   if (opts?.includeDebug) {
     pricingDebug = buildPricingDebugBreakdown({
@@ -72,6 +80,8 @@ export async function runPricingPipeline(
     pricingConfigSource: resolvedPricing.source,
     pricingConfigVersion: resolvedPricing.pricingConfigVersion,
     pricingDebug,
+    vehicle,
+    selectedVehicle,
   };
 }
 

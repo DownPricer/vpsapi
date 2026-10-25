@@ -1,3 +1,4 @@
+import { vehicleLabelFromFlat } from "../leads/vehicleLead";
 import type { LeadRequest } from "@prisma/client";
 import { PaymentStatus } from "@prisma/client";
 import { getTenantConfig } from "../../config/tenants/registry";
@@ -40,7 +41,10 @@ function tripSummaryOf(lead: LeadRequest): string | null {
   const flat = (lead.flatPayload || {}) as Record<string, unknown>;
   for (const key of ["RésuméTrajet", "ResumeTrajet"]) {
     const v = flat[key];
-    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "string" && v.trim()) {
+      const veh = vehicleLabelFromFlat(flat);
+      return veh ? `${v.trim()} — Véhicule : ${veh}` : v.trim();
+    }
   }
   return null;
 }

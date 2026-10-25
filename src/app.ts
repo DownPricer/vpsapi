@@ -1,6 +1,7 @@
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express from "express";
+import path from "path";
 import { loadEnv } from "./config/env";
 import { postStripeWebhook } from "./controllers/stripeWebhook.controller";
 import { jsonUtf8Middleware } from "./middleware/jsonUtf8";
@@ -11,6 +12,7 @@ import { createPlatformRouter } from "./platform/platform.routes";
 import { telemetryRoutes } from "./platform/telemetry.routes";
 import { healthRoutes } from "./routes/health.routes";
 import { createTenantApiRouter } from "./routes";
+import { getUploadsRoot } from "./modules/fleet/photoStorage";
 
 export function createApp(): express.Application {
   const env = loadEnv();
@@ -29,6 +31,23 @@ export function createApp(): express.Application {
     (req, res, next) => {
       void postStripeWebhook(req, res, next);
     }
+  );
+  /**
+   * Médias uploadés (photos de véhicules) : dossier persistant UPLOADS_DIR, URLs `/media/vehicles/<tenantId>/<uuid>.webp`.
+   * Publics par nature (affichés sur le site), noms non devinables, nosniff + cache long (le nom change à chaque remplacement).
+   */
+  app.use(
+    "/media",
+    express.static(path.join(getUploadsRoot()), {
+      index: false,
+      dotfiles: "ignore",
+      maxAge: "365d",
+      immutable: true,
+      setHeaders: (res) => {
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      },
+    })
   );
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());

@@ -1,3 +1,4 @@
+import { syncLeadOccupation } from "./vehicleAvailability.service";
 import type { LeadRequest } from "@prisma/client";
 import { CancellationRequestStatus, LeadPaymentStatus, LeadStatus, PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
@@ -226,6 +227,8 @@ export async function cancelBooking(input: CancelBookingInput): Promise<CancelBo
         ...(!paid && unpaidPaymentsCancelled > 0 ? { paymentStatus: LeadPaymentStatus.CANCELLED } : {}),
       },
     });
+    // Annulation CONFIRMÉE : le véhicule est libéré (la réservation et son historique restent en base).
+    await syncLeadOccupation(tx, lead.id);
     await tx.leadStatusHistory.create({
       data: {
         leadId: lead.id,
@@ -447,6 +450,7 @@ export async function resolveCancellationRequest(input: {
       throw new BookingCancellationError("NO_PENDING_REQUEST", "Cette demande a déjà été traitée.", 409);
     }
     const lead = await tx.leadRequest.update({ where: { id: input.leadId }, data: { status: request.previousLeadStatus } });
+    await syncLeadOccupation(tx, input.leadId);
     await tx.leadStatusHistory.create({
       data: {
         leadId: input.leadId,

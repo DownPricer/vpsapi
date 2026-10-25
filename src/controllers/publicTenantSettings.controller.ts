@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { TenantSettingsService } from "../services/tenantSettings.service";
 import { sanitizePublicTenantSettings } from "../utils/sanitizePublicTenantSettings";
+import { applyFleetToSettings } from "../services/vehicle.service";
 
 const tenantSettingsService = new TenantSettingsService();
 
@@ -33,7 +34,7 @@ export async function getPublicTenantSettings(req: Request, res: Response, next:
     const sanitized = sanitizePublicTenantSettings(state.settings);
     res.status(200).json({
       success: true,
-      data: { settings: sanitized ?? {} },
+      data: { settings: (await applyFleetToSettings(tenantId, sanitized)) ?? {} },
       meta: {
         persisted: true,
         paymentOnlineEnabled: state.paymentOnlineEnabled,

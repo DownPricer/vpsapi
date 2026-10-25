@@ -37,6 +37,21 @@ enum LeadStatus {
   cancellation_requested
 }
 
+enum VehicleSurchargeMode {
+  none
+  fixed
+  per_km
+  percent_km
+}
+
+enum VehicleBlockReason {
+  maintenance
+  repair
+  leave
+  immobilized
+  other
+}
+
 enum StripeOnboardingStatus {
   NOT_STARTED
   PENDING
@@ -164,6 +179,7 @@ model Tenant {
   paymentRefunds               PaymentRefund[]
   cancellationRequests         CancellationRequest[]
   bookingAccessTokens          BookingAccessToken[]
+  vehicles                     Vehicle[]
 }
 
 model TenantDomain {
@@ -202,7 +218,7 @@ model OperatorUser {
 }
 
 model LeadRequest {
-  id                            String                @id @default(cuid())
+  id                            String                 @id @default(cuid())
   tenantId                      String
   kind                          LeadKind
   status                        LeadStatus
@@ -224,22 +240,30 @@ model LeadRequest {
   customerDecisionMailSentAt    DateTime?
   customerDecisionMailLastError String?
   /// Miroir simple pour l’UI ; source de vérité : enregistrements Payment.
-  paymentStatus                 LeadPaymentStatus     @default(NONE)
+  paymentStatus                 LeadPaymentStatus      @default(NONE)
   /// Souhaite recevoir un lien de paiement en ligne après acceptation (formulaires publics).
-  clientWantsOnlinePayment      Boolean               @default(false)
+  clientWantsOnlinePayment      Boolean                @default(false)
   /// Version de la politique d'annulation en vigueur à la réservation (jamais réécrite rétroactivement).
   cancellationPolicySnapshot    Json?
   cancelledAt                   DateTime?
   cancellationReason            String?
-  createdAt                     DateTime              @default(now())
-  updatedAt                     DateTime              @updatedAt
-  tenant                        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Véhicule attribué (null = réservation historique sans véhicule : ne bloque aucune disponibilité).
+  vehicleId                     String?
+  /// Snapshot figé du véhicule et de son supplément au moment du devis/de la réservation (jamais recalculé).
+  vehicleSnapshot               Json?
+  createdAt                     DateTime               @default(now())
+  updatedAt                     DateTime               @updatedAt
+  tenant                        Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   history                       LeadStatusHistory[]
   payments                      Payment[]
   paymentRefunds                PaymentRefund[]
   cancellationRequests          CancellationRequest[]
   bookingAccessTokens           BookingAccessToken[]
+  vehicle                       Vehicle?               @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicleOccupations            VehicleDayOccupation[]
+  vehicleChanges                LeadVehicleChange[]
 
+  @@index([tenantId, vehicleId, scheduledStart])
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([tenantId, kind, status])
   @@index([tenantId, scheduledStart])
@@ -453,4 +477,122 @@ model PlatformEvent {
   @@index([observedDomain, createdAt(sort: Desc)])
   @@index([type, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
+}
+
+/// Véhicule de la flotte d'un tenant (source de vérité ; remplace TenantSettings.vehicles.items).
+model Vehicle {
+  id               String                 @id @default(cuid())
+  tenantId         String
+  /// Identifiant d'origine dans TenantSettings.vehicles.items[] (migration), pour traçabilité.
+  legacyId         String?
+  name             String
+  brand            String?
+  model            String?
+  trim             String?
+  year             Int?
+  vehicleType      String?
+  category         String?
+  shortDescription String                 @default("")
+  description      String?
+  active           Boolean                @default(true)
+  /// Archivé = retiré de la flotte sans supprimer l'historique des devis/réservations.
+  archivedAt       DateTime?
+  featured         Boolean                @default(false)
+  sortOrder        Int                    @default(0)
+  passengerMax     Int                    @default(4)
+  luggageLabel     String?
+  largeBags        Int?
+  airConditioning  Boolean                @default(false)
+  wifi             Boolean                @default(false)
+  usbChargers      Boolean                @default(false)
+  babySeats        Boolean                @default(false)
+  accessible       Boolean                @default(false)
+  features         String[]               @default([])
+  paymentChips     String[]               @default([])
+  /// Données internes : jamais exposées par les routes publiques.
+  internalRef      String?
+  licensePlate     String?
+  surchargeMode    VehicleSurchargeMode   @default(none)
+  /// fixed : €, per_km : €/km, percent_km : % (0–100).
+  surchargeValue   Decimal                @default(0) @db.Decimal(10, 4)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  photos           VehiclePhoto[]
+  leads            LeadRequest[]
+  occupations      VehicleDayOccupation[]
+  blocks           VehicleBlock[]
+
+  @@index([tenantId, archivedAt, active])
+  @@index([tenantId, sortOrder])
+}
+
+model VehiclePhoto {
+  id        String   @id @default(cuid())
+  tenantId  String
+  vehicleId String
+  /// URL publique persistante (chemin relatif `/media/vehicles/<tenantId>/<fichier>` ou ancien chemin statique).
+  url       String
+  alt       String   @default("")
+  /// 0 = photo principale ; 0..4 (5 photos max, contraint en base).
+  position  Int
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, position])
+  @@index([tenantId])
+}
+
+/// Indisponibilité manuelle (entretien, congés…), bornes incluses, en jours civils du fuseau du tenant.
+model VehicleBlock {
+  id          String                 @id @default(cuid())
+  tenantId    String
+  vehicleId   String
+  startDay    DateTime               @db.Date
+  endDay      DateTime               @db.Date
+  reason      VehicleBlockReason     @default(maintenance)
+  note        String?
+  createdAt   DateTime               @default(now())
+  vehicle     Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  occupations VehicleDayOccupation[]
+
+  @@index([tenantId, vehicleId, startDay])
+}
+
+/// Un véhicule = au plus une occupation par jour civil : la contrainte d'unicité garantit l'absence de double réservation.
+model VehicleDayOccupation {
+  id        String        @id @default(cuid())
+  tenantId  String
+  vehicleId String
+  day       DateTime      @db.Date
+  leadId    String?
+  blockId   String?
+  createdAt DateTime      @default(now())
+  vehicle   Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  lead      LeadRequest?  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  block     VehicleBlock? @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, day])
+  @@index([tenantId, day])
+  @@index([leadId])
+  @@index([blockId])
+}
+
+/// Historique des changements de véhicule sur une demande/réservation.
+model LeadVehicleChange {
+  id              String      @id @default(cuid())
+  tenantId        String
+  leadId          String
+  fromVehicleId   String?
+  toVehicleId     String?
+  fromSnapshot    Json?
+  toSnapshot      Json?
+  priceBefore     Decimal?    @db.Decimal(10, 2)
+  priceAfter      Decimal?    @db.Decimal(10, 2)
+  changedByUserId String?
+  note            String?
+  createdAt       DateTime    @default(now())
+  lead            LeadRequest @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, leadId, createdAt(sort: Desc)])
 }

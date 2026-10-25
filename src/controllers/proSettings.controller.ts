@@ -5,6 +5,7 @@ import { TenantSettingsService } from "../services/tenantSettings.service";
 import { sendValidationError } from "../utils/apiResponse";
 import { validateTenantSettingsPayload } from "../validation/tenantSettingsPayload";
 import { trackPlatformEvent } from "../platform/telemetry.service";
+import { applyFleetToSettings, keepLegacyVehiclesOnSave } from "../services/vehicle.service";
 
 const putBodySchema = z.object({
   settings: z.unknown(),
@@ -51,7 +52,9 @@ export async function getProTenantSettings(req: Request, res: Response, next: Ne
 
     res.status(200).json({
       success: true,
-      data: { settings: state.settings },
+      data: {
+        settings: await applyFleetToSettings(tenantId, state.settings as Record<string, unknown> | null),
+      },
       meta: { persisted: true },
     });
   } catch (e) {
@@ -85,7 +88,14 @@ export async function putProTenantSettings(req: Request, res: Response, next: Ne
   }
 
   try {
-    await tenantSettingsService.saveSettings(tenantId, validated.value as Prisma.InputJsonValue);
+    // La flotte vit désormais en base (table Vehicle) : on ne réécrit pas settings.vehicles (JSON d'origine conservé pour retour arrière).
+    const current = await tenantSettingsService.getSettingsState(tenantId);
+    const toSave = await keepLegacyVehiclesOnSave(
+      tenantId,
+      validated.value as Record<string, unknown>,
+      current.tenantExists ? current.settings : null
+    );
+    await tenantSettingsService.saveSettings(tenantId, toSave as Prisma.InputJsonValue);
     void trackPlatformEvent({
       tenantId,
       type: "pro_settings_saved",

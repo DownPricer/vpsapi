@@ -10,6 +10,9 @@ import type { DistanceUsageContext } from "../modules/distance/distanceMatrix";
 import type { PricingDebugBreakdown } from "../modules/pricing/pricingDebugBreakdown";
 import { parseClientWantsOnlinePayment } from "../modules/leads/parseClientWantsOnlinePayment";
 import { parseClientBlock } from "../validation/clientBlock";
+import { vehicleFlatFields, vehicleLeadColumns } from "../modules/leads/vehicleLead";
+import { assertVehicleFree, leadOccupationDays } from "./vehicleAvailability.service";
+import { prisma } from "../db/prisma";
 
 export interface ReservationSuccess {
   reservationId: string;
@@ -49,7 +52,7 @@ export class ReservationService {
       throw new Error(clientParsed.message);
     }
 
-    const { result, pricingDebug, engine, pricingConfigSource, pricingConfigVersion } = await runPricingPipeline(tenant, body, { includeDebug, usageContext });
+    const { result, pricingDebug, engine, pricingConfigSource, pricingConfigVersion, vehicle } = await runPricingPipeline(tenant, body, { includeDebug, usageContext });
     const rawPayloadForStorage = this.buildRawPayloadForStorage(body, {
       pricingConfigSource,
       pricingConfigVersion,
@@ -71,7 +74,17 @@ export class ReservationService {
       paymentMethod,
       paye,
     });
+    Object.assign(lead, vehicleFlatFields(vehicle));
     const schedule = inferScheduleRange(lead, engine);
+    if (vehicle && schedule.start) {
+      // Une demande ne bloque pas le véhicule (blocage à l'acceptation), mais on refuse un véhicule déjà pris ce jour-là.
+      await assertVehicleFree(prisma, {
+        tenantId: tenant.id,
+        vehicleId: vehicle.vehicleId,
+        vehicleName: vehicle.name,
+        days: leadOccupationDays({ tenantId: tenant.id, scheduledStart: schedule.start, scheduledEnd: schedule.end }),
+      });
+    }
     const wantsOnline = parseClientWantsOnlinePayment(body);
     const created = await this.requestService.createLead({
       tenantId: tenant.id,
@@ -87,6 +100,7 @@ export class ReservationService {
       scheduledStart: schedule.start,
       scheduledEnd: schedule.end,
       clientWantsOnlinePayment: wantsOnline,
+      ...vehicleLeadColumns(vehicle),
     });
 
     const client = body.client as Record<string, string>;
@@ -94,6 +108,7 @@ export class ReservationService {
     const summaryLines = [
       `Référence : ${created.id}`,
       `Tarif : ${result.tarif} €`,
+      ...(vehicle ? [`Véhicule : ${vehicle.name}${vehicle.surcharge.amount > 0 ? ` (dont supplément ${vehicle.surcharge.amount} €)` : ""}`] : []),
       `Paiement : ${paye} — ${paymentMethod}`,
       `Trajet : ${lead.RésuméTrajet || ""}`,
     ];

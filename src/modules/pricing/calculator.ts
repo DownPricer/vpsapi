@@ -2,6 +2,7 @@ import { DateTime } from "luxon";
 import { getDistancesWithFallback, type DistanceUsageContext } from "../distance/distanceMatrix";
 import { calculerCreneaux, isFerie } from "./creneaux";
 import type { TenantPricingEngineConfig } from "./engineTypes";
+import { emptyBasis, type VehicleSurchargeBasis } from "./vehicleSurcharge";
 import { getPrimaryServiceZoneCommunes } from "./zoneSets/registry";
 import type { Distances, TarifResult } from "./types";
 import {
@@ -388,6 +389,7 @@ export async function calculerTarif(
     const tKmAller = kmTarifClassique(trajetKm, zone, isAR, engine);
     const apCoef = isAR ? engine.tcTable.AR.APPROCHE : engine.tcTable.SIMPLE.APPROCHE;
 
+      vehicleBasis: emptyBasis(),
     const approcheKm = distances.aller.approche.km ?? 0;
     const retourBaseKm = distances.aller.retourBase.km ?? 0;
     const retourBaseCoef = engine.returnToBaseEnabled !== false ? apCoef : 0;
@@ -420,6 +422,10 @@ export async function calculerTarif(
         fmt((tarifs.retour as Record<string, number>).approche) +
         fmt((tarifs.retour as Record<string, number>).trajet) +
         fmt((tarifs.retour as Record<string, number>).retourBase);
+    /** Coefficient appliqué à la composante kilométrique par les remises/coefficients globaux (assiette du supplément véhicule). */
+    let kmFactor = 1;
+    let billedKm = approcheKm + trajetKm + (engine.returnToBaseEnabled !== false ? retourBaseKm : 0);
+    let kmAmountRaw = fmt((tarifs.aller as Record<string, number>).total);
       total += (tarifs.retour as Record<string, number>).total;
 
       if (tct === AR_MAD_CANON) {
@@ -438,6 +444,8 @@ export async function calculerTarif(
           else if (nuit || soiree) tarifHoraireMAD = engine.madHourlyRates.eveningOrNight;
         }
         tarifs.miseADisposition =
+      billedKm += approcheRetourKm + trajetRetourKm + (engine.returnToBaseEnabled !== false ? retourBaseRetourKm : 0);
+      kmAmountRaw += fmt((tarifs.retour as Record<string, number>).total);
           tarifHoraireMAD * (parseFloat(t?.HeureMADClassique ?? "0") || 0);
         total += tarifs.miseADisposition as number;
       }
@@ -460,6 +468,7 @@ export async function calculerTarif(
     const baseRetourForMaj = isAR
       ? fmt((tarifs.retour as Record<string, number>).total)
       : 0;
+        kmFactor *= 1 - engine.arDiscountPercent / 100;
     const mA =
       readManualMaj(payload, "majoration_aller") ??
       majFrom(baseAllerForMaj, dtAller, engine).amount;
@@ -496,6 +505,7 @@ export async function calculerTarif(
 
     majorations.push({ leg: "aller", montant: tarifs.majAller as number });
     if (isAR)
+      kmFactor *= engine.outOfPrimaryServiceZoneMultiplier;
       majorations.push({ leg: "retour", montant: tarifs.majRetour as number });
 
     const creneaux = await calculerCreneaux(payload, distances, engine);
@@ -515,12 +525,18 @@ export async function calculerTarif(
     );
     let airportCode = "ORY";
     for (const [code, ap] of Object.entries(engine.airports)) {
+    const vehicleBasis: VehicleSurchargeBasis = {
+      kmApplicable: true,
+      billableKm: billedKm,
+      kmAmount: kmAmountRaw * kmFactor,
+    };
       if (ap.names.some((n) => destStr.toLowerCase().includes(n))) {
         airportCode = code;
         break;
       }
     }
     const pax = Math.max(1, Math.min(4, parseInt(a?.TApassagers) || 1));
+      vehicleBasis,
     const plage = pax <= 2 ? "1-2" : "3-4";
     const isAR = a?.TAtrajet === "Aller/Retour";
     const cfgType = isAR ? "ALLER_RETOUR" : "SIMPLE";
@@ -593,6 +609,21 @@ export async function calculerTarif(
     distances,
     tarifs,
     majorations,
+    const airportKmBilled =
+      (distances.aller.approche.km || 0) +
+      (distances.aller.trajet.km || 0) +
+      (distances.aller.retourBase.km || 0) +
+      (isAR
+        ? (distances.retour.approche.km || 0) + (distances.retour.trajet.km || 0) + (distances.retour.retourBase.km || 0)
+        : 0);
+    const vehicleBasis: VehicleSurchargeBasis = {
+      kmApplicable: true,
+      billableKm: airportKmBilled,
+      kmAmount:
+        fmt((tarifs.aller as Record<string, number>).total) +
+        (isAR ? fmt((tarifs.retour as Record<string, number>).total) : 0),
+    };
     ...creneaux,
   } as TarifResult;
 }
+      vehicleBasis,

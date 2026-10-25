@@ -18,6 +18,7 @@ import {
 import { getProTenantSettings, putProTenantSettings } from "../controllers/proSettings.controller";
 import { proDemandesRoutes } from "./proDemandes.routes";
 import { proStripeRoutes } from "./proStripe.routes";
+import { proVehiclesRoutes } from "./proVehicles.routes";
 
 export const proRoutes = Router();
 
@@ -34,5 +35,6 @@ proRoutes.post("/payments/:paymentId/sync", postProPaymentSync);
 proRoutes.get("/cancellation-requests", getPendingCancellationRequests);
 proRoutes.get("/cancellation-policy", getProCancellationPolicy);
 proRoutes.put("/cancellation-policy", putProCancellationPolicy);
+proRoutes.use(proVehiclesRoutes);
 proRoutes.use("/demandes", proDemandesRoutes);
 proRoutes.use("/stripe", proStripeRoutes);
