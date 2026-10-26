@@ -27,6 +27,11 @@ function isEmail(v: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
 }
 
+/** Adresses d'exemple du modèle (« contact@example.com » est enregistrée dès la première sauvegarde du site). */
+export function isPlaceholderEmail(v: string): boolean {
+  return /@(?:[a-z0-9-]+\.)*example\.(?:com|org|net|fr)$/i.test(v.trim());
+}
+
 const knownCache = new Map<string, Cached<boolean>>();
 
 /**
@@ -100,7 +105,7 @@ export async function buildRuntimeTenantConfig(tenantId: string, fallback: Tenan
   const name = str(settings.general?.commercialName) || row.name || fallback.company.name;
   const legalName = str(settings.general?.legalName) || name;
   const publicEmail = str(settings.contact?.emailPublic);
-  const toEmail = (isEmail(publicEmail) ? publicEmail : "") || admin?.email || "";
+  const toEmail = (isEmail(publicEmail) && !isPlaceholderEmail(publicEmail) ? publicEmail : "") || admin?.email || "";
 
   const value: TenantConfig = {
     ...fallback,

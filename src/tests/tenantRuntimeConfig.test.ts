@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { prisma } from "../db/prisma";
 import { getTenantConfig } from "../config/tenants/registry";
-import { buildRuntimeTenantConfig, dashboardBaseFor, isKnownTenantId, rebaseUrl } from "../tenancy/tenantRuntimeConfig";
+import { buildRuntimeTenantConfig, dashboardBaseFor, isKnownTenantId, isPlaceholderEmail, rebaseUrl } from "../tenancy/tenantRuntimeConfig";
 import { resolveConnectUrls } from "../services/stripeConnect.service";
 import { emptyFleetSettings } from "../services/vehicle.service";
 
@@ -60,4 +60,13 @@ test("X-Tenant-ID : un tenant actif en base est reconnu (sinon le site client re
   assert.equal(await isKnownTenantId("default"), true, "tenant du registre");
   assert.equal(await isKnownTenantId("t-db"), true, "tenant en base");
   assert.equal(await isKnownTenantId("t-inconnu"), false);
+});
+
+test("e-mail d'exemple du modèle : ignoré, les demandes vont au compte admin", async () => {
+  assert.equal(isPlaceholderEmail("contact@example.com"), true);
+  assert.equal(isPlaceholderEmail("a@mail.example.org"), true);
+  assert.equal(isPlaceholderEmail("reservation@dupont.fr"), false);
+  stubDb("t-placeholder", { settings: { contact: { emailPublic: "contact@example.com" } }, adminEmail: "pro@dupont.fr" });
+  const cfg = await buildRuntimeTenantConfig("t-placeholder", getTenantConfig("default")!);
+  assert.equal(cfg.smtp.toEmail, "pro@dupont.fr");
 });
