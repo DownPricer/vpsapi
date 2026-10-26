@@ -1,7 +1,7 @@
 import { vehicleLabelFromFlat } from "../leads/vehicleLead";
 import type { LeadRequest, Payment } from "@prisma/client";
 import { PaymentMode, PaymentStatus } from "@prisma/client";
-import { getTenantConfig } from "../../config/tenants/registry";
+import { resolveTenantConfig } from "../../tenancy/tenantRuntimeConfig";
 import { prisma } from "../../db/prisma";
 import type { TenantConfig } from "../../types/tenant";
 import {
@@ -181,7 +181,7 @@ export async function notifyPaymentConfirmedAfterWebhookTransition(params: {
       return;
     }
 
-    const tenantCfg = getTenantConfig(params.tenantId);
+    const tenantCfg = await resolveTenantConfig(params.tenantId);
     if (!tenantCfg) {
       console.warn(
         `[stripe-webhook][mail] confirmation ignorée : config tenant introuvable (${params.tenantId})`

@@ -13,6 +13,7 @@ import { parseClientBlock } from "../validation/clientBlock";
 import { vehicleFlatFields, vehicleLeadColumns } from "../modules/leads/vehicleLead";
 import { assertVehicleFree, leadOccupationDays } from "./vehicleAvailability.service";
 import { prisma } from "../db/prisma";
+import { dashboardBaseFor } from "../tenancy/tenantRuntimeConfig";
 
 export interface ReservationSuccess {
   reservationId: string;
@@ -124,7 +125,7 @@ export class ReservationService {
           TypeDemande: "reservation",
           Statut: created.status,
           Societe: lead.NomSociete || "",
-          DashboardLink: `${process.env.DASHBOARD_BASE_URL || "https://app.sitereadyshd.fr"}/pro/demandes/${created.id}`,
+          DashboardLink: `${dashboardBaseFor(tenant)}/pro/demandes/${created.id}`,
         },
         client.email,
         displayName,

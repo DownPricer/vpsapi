@@ -1,7 +1,7 @@
 import { vehicleLabelFromFlat } from "../leads/vehicleLead";
 import type { LeadRequest } from "@prisma/client";
 import { PaymentStatus } from "@prisma/client";
-import { getTenantConfig } from "../../config/tenants/registry";
+import { resolveTenantConfig } from "../../tenancy/tenantRuntimeConfig";
 import { prisma } from "../../db/prisma";
 import { parseStoredSnapshot, policyLines } from "../../services/cancellationPolicy";
 import { tryBuildManageUrl } from "../../services/bookingAccess.service";
@@ -193,7 +193,7 @@ function failureLabel(code: string | null): string | null {
 /** Envoie les e-mails de remboursement (client + chauffeur en cas d'échec). Ne lève jamais. */
 export class RefundMailNotifier implements RefundNotifier {
   async send(ctx: RefundNotifyContext): Promise<void> {
-    const tenant = getTenantConfig(ctx.payment.tenantId);
+    const tenant = await resolveTenantConfig(ctx.payment.tenantId);
     if (!tenant) {
       console.warn(`[refund][mail] config tenant introuvable (${ctx.payment.tenantId})`);
       return;

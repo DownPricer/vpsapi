@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { buildContactPayload } from "../modules/leads/buildLeadRecord";
 import { sendContactLeadEmail } from "../modules/email/sendLeadEmails";
 import { RequestService } from "./request.service";
+import { dashboardBaseFor } from "../tenancy/tenantRuntimeConfig";
 import { contactBodySchema } from "../validation/clientBlock";
 
 export interface ContactSuccess {
@@ -56,7 +57,7 @@ export class ContactService {
         TypeDemande: "contact",
         Statut: created.status,
         Societe: lead.NomSociete || "",
-        DashboardLink: `${process.env.DASHBOARD_BASE_URL || "https://app.sitereadyshd.fr"}/pro/demandes/${created.id}`,
+        DashboardLink: `${dashboardBaseFor(tenant)}/pro/demandes/${created.id}`,
       }, lead.Email);
       await this.requestService.markEmailResult(created.id, tenant.id, true);
     } catch (e) {

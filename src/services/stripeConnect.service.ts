@@ -1,6 +1,6 @@
 import { StripeOnboardingStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
-import { getTenantConfig } from "../config/tenants/registry";
+import { rebaseUrl, resolveTenantBaseUrl } from "../tenancy/tenantRuntimeConfig";
 import { getStripeClient } from "./stripe/stripeClient";
 import {
   canOpenExpressDashboard,
@@ -77,12 +77,18 @@ const EMPTY_FACTS: StripeAccountFacts = {
  * URLs de retour / renouvellement d'onboarding : variables d'environnement si définies (comportement historique),
  * sinon le site public du tenant (`/pro/stripe?stripe=return|refresh`).
  */
-export function resolveConnectUrls(tenantId: string): { refreshUrl: string; returnUrl: string } | null {
+export async function resolveConnectUrls(tenantId: string): Promise<{ refreshUrl: string; returnUrl: string } | null> {
   const refreshEnv = process.env.STRIPE_CONNECT_REFRESH_URL?.trim();
   const returnEnv = process.env.STRIPE_CONNECT_RETURN_URL?.trim();
-  if (refreshEnv && returnEnv) return { refreshUrl: refreshEnv, returnUrl: returnEnv };
-  const base = getTenantConfig(tenantId)?.branding?.siteUrl?.trim().replace(/\/$/, "");
-  if (base && base.startsWith("https://")) {
+  // Les variables d'environnement donnent le chemin ; l'origine est TOUJOURS celle du site du tenant
+  // (sinon chaque client serait renvoyé vers le site modèle après l'onboarding Stripe).
+  const base = await resolveTenantBaseUrl(tenantId);
+  if (refreshEnv && returnEnv) {
+    return base
+      ? { refreshUrl: rebaseUrl(refreshEnv, base), returnUrl: rebaseUrl(returnEnv, base) }
+      : { refreshUrl: refreshEnv, returnUrl: returnEnv };
+  }
+  if (base) {
     return { refreshUrl: `${base}/pro/stripe?stripe=refresh`, returnUrl: `${base}/pro/stripe?stripe=return` };
   }
   return null;
@@ -93,7 +99,9 @@ export class StripeConnectService {
     private readonly deps: {
       db: Pick<typeof prisma, "tenant" | "payment" | "paymentRefund">;
       getStripe: () => ReturnType<typeof getStripeClient>;
-      resolveUrls: (tenantId: string) => { refreshUrl: string; returnUrl: string } | null;
+      resolveUrls: (
+        tenantId: string
+      ) => { refreshUrl: string; returnUrl: string } | null | Promise<{ refreshUrl: string; returnUrl: string } | null>;
     } = { db: prisma, getStripe: getStripeClient, resolveUrls: resolveConnectUrls }
   ) {}
 
@@ -188,7 +196,7 @@ export class StripeConnectService {
         503
       );
     }
-    const urls = this.deps.resolveUrls(tenantId);
+    const urls = await this.deps.resolveUrls(tenantId);
     if (!urls) {
       throw new StripeConnectServiceError(
         "STRIPE_CONNECT_URLS_NOT_CONFIGURED",

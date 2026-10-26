@@ -19,6 +19,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { normalizeDomain, withoutWww, isTechnicalDomain } from "../tenancy/domainResolver";
 import marketingDefaults from "./data/tenant-marketing-defaults.json";
+import { emptyFleetSettings } from "../services/vehicle.service";
 
 const TEMPLATE_COMMERCIAL_NAME = "Exemple VTC";
 const TEMPLATE_LEGAL_NAME = "SAS Exemple VTC";
@@ -118,6 +119,8 @@ async function main(): Promise<void> {
   general.commercialName = name;
   general.legalName = legalName;
   settings.general = general;
+  // Aucun véhicule d'exemple : le client ajoute les siens dans /pro/vehicules.
+  settings.vehicles = emptyFleetSettings();
 
   const password = str(args, "password") || randomBytes(12).toString("base64url");
   const remaining = countPlaceholders(settings);

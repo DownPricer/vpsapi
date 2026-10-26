@@ -8,6 +8,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { rebaseUrl, resolveTenantBaseUrl } from "../tenancy/tenantRuntimeConfig";
 import { getStripeClient, isStripeConfigured } from "./stripe/stripeClient";
 import { trackPlatformEvent } from "../platform/telemetry.service";
 import {
@@ -81,17 +82,21 @@ function normalizeStripeSuccessUrl(raw: string): string {
   return `${u}${sep}session_id={CHECKOUT_SESSION_ID}`;
 }
 
-function requirePaymentUrls(): { successUrl: string; cancelUrl: string } {
+async function requirePaymentUrls(tenantId: string): Promise<{ successUrl: string; cancelUrl: string }> {
   const successRaw = process.env.STRIPE_PAYMENT_SUCCESS_URL?.trim();
-  const cancelUrl = process.env.STRIPE_PAYMENT_CANCEL_URL?.trim();
-  if (!successRaw || !cancelUrl) {
+  const cancelRaw = process.env.STRIPE_PAYMENT_CANCEL_URL?.trim();
+  if (!successRaw || !cancelRaw) {
     throw new PaymentLinkError(
       "STRIPE_PAYMENT_URLS_NOT_CONFIGURED",
       "URLs de retour paiement Stripe manquantes côté API.",
       503
     );
   }
-  return { successUrl: normalizeStripeSuccessUrl(successRaw), cancelUrl };
+  // Les variables donnent le chemin ; l'origine est celle du site du tenant (pas du site modèle).
+  const base = await resolveTenantBaseUrl(tenantId);
+  const successUrl = base ? rebaseUrl(successRaw, base) : successRaw;
+  const cancelUrl = base ? rebaseUrl(cancelRaw, base) : cancelRaw;
+  return { successUrl: normalizeStripeSuccessUrl(successUrl), cancelUrl };
 }
 
 /**
@@ -185,7 +190,7 @@ export class StripePaymentService {
         503
       );
     }
-    const { successUrl, cancelUrl } = requirePaymentUrls();
+    const { successUrl, cancelUrl } = await requirePaymentUrls(input.tenantId);
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: input.tenantId },

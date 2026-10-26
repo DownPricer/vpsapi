@@ -601,13 +601,29 @@ function toVitrineItem(v: PublicVehicle): LegacyVehicleItem {
  * pour ne pas toucher au design du site public). Sinon (tenant non migré), le JSON d'origine est servi tel quel.
  * Aucune donnée interne (immatriculation, référence interne) n'est incluse.
  */
+/** Réglages `vehicles` d'un tenant en mode flotte sans aucun véhicule : rien n'est affiché sur la vitrine. */
+export function emptyFleetSettings(): Record<string, unknown> {
+  return {
+    source: "fleet",
+    featuredVehicleId: "",
+    featured: { id: "", name: "", headline: "", passengerMax: 1, highlightText: "", paymentChips: [], gallery: [] },
+    items: [],
+  };
+}
+
 export async function applyFleetToSettings(
   tenantId: string,
   settings: Record<string, unknown> | null
 ): Promise<Record<string, unknown> | null> {
   if (!settings) return settings;
   const total = await prisma.vehicle.count({ where: { tenantId } });
-  if (total === 0) return settings;
+  if (total === 0) {
+    const legacy = settings.vehicles;
+    if (legacy && typeof legacy === "object" && (legacy as { source?: unknown }).source === "fleet") {
+      return { ...settings, vehicles: emptyFleetSettings() };
+    }
+    return settings;
+  }
 
   const vehicles = await listPublicVehicles(tenantId);
   const items = vehicles.map(toVitrineItem);

@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import type { AppEnv } from "../config/env";
 import { getTenantConfig } from "../config/tenants/registry";
 import { resolveTenantFromRequest } from "../tenancy/domainResolver";
+import { buildRuntimeTenantConfig } from "../tenancy/tenantRuntimeConfig";
 import { sendTenantNotFound } from "../utils/apiResponse";
 
 export function tenantMiddleware(env: AppEnv) {
@@ -35,7 +36,7 @@ export function tenantMiddleware(env: AppEnv) {
 
       const tenantConfig = getTenantConfig(tenantId);
       const fallbackConfig = tenantConfig ? null : getTenantConfig(env.defaultTenantId);
-      const tenant = tenantConfig ?? (fallbackConfig ? { ...fallbackConfig, id: tenantId } : undefined);
+      const tenant = tenantConfig ?? (fallbackConfig ? await buildRuntimeTenantConfig(tenantId, fallbackConfig) : undefined);
       if (!tenant) {
         sendTenantNotFound(res, tenantId);
         return;

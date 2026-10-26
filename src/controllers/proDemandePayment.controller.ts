@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { PaymentMode } from "@prisma/client";
 import { z } from "zod";
-import { getTenantConfig } from "../config/tenants/registry";
+import { resolveTenantConfig } from "../tenancy/tenantRuntimeConfig";
 import { prisma } from "../db/prisma";
 import {
   pickVtcPhoneFromTenantSettings,
@@ -92,7 +92,7 @@ export async function postDemandePaymentLink(
           select: { settings: true },
         }),
       ]);
-      const tenantCfg = getTenantConfig(tenantId);
+      const tenantCfg = await resolveTenantConfig(tenantId);
 
       if (!lead || !tenantCfg) {
         emailSent = false;
