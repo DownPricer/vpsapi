@@ -27,6 +27,22 @@ function isEmail(v: string): boolean {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
 }
 
+const knownCache = new Map<string, Cached<boolean>>();
+
+/**
+ * Un `X-Tenant-ID` est valide s'il désigne un tenant du registre OU un tenant actif en base
+ * (les clients créés par `tenant:create` n'ont pas de fichier de config).
+ */
+export async function isKnownTenantId(tenantId: string): Promise<boolean> {
+  if (getTenantConfig(tenantId)) return true;
+  const hit = knownCache.get(tenantId);
+  if (fresh(hit)) return hit.value;
+  const row = await prisma.tenant.findFirst({ where: { id: tenantId, active: true }, select: { id: true } });
+  if (knownCache.size > 500) knownCache.clear();
+  knownCache.set(tenantId, { value: Boolean(row), at: Date.now() });
+  return Boolean(row);
+}
+
 /** URL publique du tenant : domaine actif canonique en base, sinon `branding.siteUrl` du fichier de config. */
 export async function resolveTenantBaseUrl(tenantId: string): Promise<string | null> {
   const hit = baseUrlCache.get(tenantId);

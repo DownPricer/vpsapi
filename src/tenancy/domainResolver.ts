@@ -1,6 +1,7 @@
 import type { Request } from "express";
 import { prisma } from "../db/prisma";
 import { getTenantConfig } from "../config/tenants/registry";
+import { isKnownTenantId } from "./tenantRuntimeConfig";
 
 const TECHNICAL_DOMAINS = new Set([
   "localhost",
@@ -162,7 +163,7 @@ export async function resolveTenantFromRequest(
 ): Promise<TenantRequestResolution> {
   const { domain: observedDomain, origin } = extractObservedDomain(req, options.metadata);
   const headerTenant = safeString(options.bodyTenantId ?? firstHeader(req, "x-tenant-id"), 80);
-  const headerTenantIsValid = Boolean(headerTenant && getTenantConfig(headerTenant));
+  const headerTenantIsValid = Boolean(headerTenant && (await isKnownTenantId(headerTenant)));
 
   if (observedDomain && !isTechnicalDomain(observedDomain)) {
     const row = await findDomain(observedDomain);

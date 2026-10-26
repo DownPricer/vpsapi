@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { prisma } from "../db/prisma";
 import { getTenantConfig } from "../config/tenants/registry";
-import { buildRuntimeTenantConfig, dashboardBaseFor, rebaseUrl } from "../tenancy/tenantRuntimeConfig";
+import { buildRuntimeTenantConfig, dashboardBaseFor, isKnownTenantId, rebaseUrl } from "../tenancy/tenantRuntimeConfig";
 import { resolveConnectUrls } from "../services/stripeConnect.service";
 import { emptyFleetSettings } from "../services/vehicle.service";
 
@@ -53,4 +53,11 @@ test("flotte vide : aucun véhicule d'exemple", () => {
   assert.deepEqual(f.items, []);
   assert.equal(f.featured.name, "");
   assert.deepEqual(f.featured.gallery, []);
+});
+
+test("X-Tenant-ID : un tenant actif en base est reconnu (sinon le site client reçoit les réglages du modèle)", async () => {
+  (prisma.tenant as any).findFirst = async ({ where }: { where: { id: string } }) => (where.id === "t-db" ? { id: "t-db" } : null);
+  assert.equal(await isKnownTenantId("default"), true, "tenant du registre");
+  assert.equal(await isKnownTenantId("t-db"), true, "tenant en base");
+  assert.equal(await isKnownTenantId("t-inconnu"), false);
 });
