@@ -22,6 +22,7 @@
     "verify:tenant-vs-pricing-config": "tsx src/scripts/verifyTenantEnginePricingConfigParity.ts",
     "verify:pricing-config": "tsx src/scripts/verifyPricingConfig.ts",
     "audit:utf8": "tsx src/scripts/auditUtf8.ts",
+    "tenant:create": "tsx src/scripts/createTenant.ts",
     "platform:fix-default-domain": "tsx src/scripts/fixDefaultDomain.ts",
     "fleet:convert-base64-photos": "tsx src/scripts/convertBase64VehiclePhotos.ts"
   },
