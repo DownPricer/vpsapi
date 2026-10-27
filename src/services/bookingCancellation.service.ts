@@ -11,6 +11,7 @@ import { getStripeClient } from "./stripe/stripeClient";
 import { formatEurCents } from "./stripe/refundMath";
 import { RefundServiceError, type RequestRefundResult } from "./stripe/refund.service";
 import type { RefundPreview } from "./stripe/refund.types";
+import { notifyTenantPush } from "./push";
 
 export class BookingCancellationError extends Error {
   readonly code: string;
@@ -387,6 +388,7 @@ export async function createCustomerCancellationRequest(
 
   const fresh = (await prisma.leadRequest.findUnique({ where: { id: lead.id } })) ?? lead;
   void sendCancellationRequestMails({ tenant, lead: fresh, reason }).catch(() => undefined);
+  notifyTenantPush(tenantId, "cancellation_request", lead.id);
   return { requestId: request.id, status: request.status };
 }
 

@@ -3,6 +3,7 @@ import { PaymentStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { trackPlatformEvent } from "../platform/telemetry.service";
 import { buildPolicySnapshot, parseStoredPolicy } from "./cancellationPolicy";
+import { notifyTenantPush } from "./push";
 import { isBlockingStatus, syncLeadOccupation } from "./vehicleAvailability.service";
 
 export type CreateLeadInput = {
@@ -70,6 +71,8 @@ export class RequestService {
         hasPricingResult: created.pricingResult != null,
       },
     });
+    // Tous les appelants sont des parcours publics (contact, devis, réservation).
+    notifyTenantPush(created.tenantId, "new_request", created.id);
     return created;
   }
 

@@ -34,6 +34,7 @@ Ne jamais committer le `.env`. En production, définir des secrets forts (les va
 | `PLATFORM_ADMIN_ENABLED` | non | Active le super-admin plateforme (défaut `false`) |
 | `PLATFORM_SESSION_SECRET` | si super-admin | Secret de session du super-admin |
 | `TELEMETRY_ENABLED` | non | Active la télémétrie plateforme (défaut `false`) |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | pour les notifications push | Clés VAPID (générées avec `npx web-push generate-vapid-keys`) et contact `mailto:` ou `https://`. Sans elles, le push est désactivé. La clé privée ne doit jamais être commitée. |
 | `PRICING_DEBUG_SECRET` | non | Secret d’accès au debug de tarification |
 | `SEED_OPERATOR_TENANT_ID` / `SEED_OPERATOR_EMAIL` / `SEED_OPERATOR_PASSWORD` | non | Création de l’opérateur initial au démarrage |
 

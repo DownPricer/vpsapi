@@ -180,6 +180,7 @@ model Tenant {
   cancellationRequests         CancellationRequest[]
   bookingAccessTokens          BookingAccessToken[]
   vehicles                     Vehicle[]
+  pushSubscriptions            PushSubscription[]
 }
 
 model TenantDomain {
@@ -201,17 +202,18 @@ model TenantDomain {
 }
 
 model OperatorUser {
-  id           String              @id @default(cuid())
-  tenantId     String
-  email        String
-  passwordHash String
-  role         OperatorRole        @default(agent)
-  active       Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sessions     AuthSession[]
-  changedLeads LeadStatusHistory[]
+  id                String              @id @default(cuid())
+  tenantId          String
+  email             String
+  passwordHash      String
+  role              OperatorRole        @default(agent)
+  active            Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions          AuthSession[]
+  changedLeads      LeadStatusHistory[]
+  pushSubscriptions PushSubscription[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -595,4 +597,23 @@ model LeadVehicleChange {
   lead            LeadRequest @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, leadId, createdAt(sort: Desc)])
+}
+
+/// Abonnement Web Push d'un appareil d'opérateur (espace /pro). Les clés ne servent qu'à chiffrer les notifications.
+model PushSubscription {
+  id         String       @id @default(cuid())
+  tenantId   String
+  userId     String
+  endpoint   String       @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  lastUsedAt DateTime?
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       OperatorUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
 }

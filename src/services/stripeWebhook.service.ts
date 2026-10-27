@@ -8,6 +8,7 @@ import { fetchStripeReceiptUrlForPaymentIntent } from "./stripe/stripeReceiptUrl
 import { getStripeClient } from "./stripe/stripeClient";
 import { trackPlatformEvent } from "../platform/telemetry.service";
 import { getRefundService } from "./refundContainer";
+import { notifyTenantPush } from "./push";
 import { factsFromStripeAccount, resolveOnboardingEnum } from "./stripe/stripeAccountStatus";
 
 /** Formes minimales des objets Stripe (évite les types du constructeur exporté par défaut). */
@@ -205,6 +206,8 @@ async function handleCheckoutSessionCompleted(
   });
 
   if (transitioned) {
+    // Transition réelle uniquement : un événement Stripe rejoué ne renotifie pas.
+    notifyTenantPush(tenantId, "payment_confirmed", leadRequestId);
     await persistReceiptThenNotify({
       paymentId,
       tenantId,
@@ -255,6 +258,8 @@ async function handlePaymentIntentSucceeded(
   });
 
   if (transitioned) {
+    // Transition réelle uniquement : un événement Stripe rejoué ne renotifie pas.
+    notifyTenantPush(tenantId, "payment_confirmed", leadRequestId);
     await persistReceiptThenNotify({
       paymentId,
       tenantId,
