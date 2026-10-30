@@ -22,6 +22,12 @@ function optionalBool(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
+/** Valeurs de repli locales uniquement — jamais utilisables hors développement. */
+export const DEV_JWT_ACCESS_SECRET = "dev-access-secret-change-me";
+export const DEV_JWT_REFRESH_SECRET = "dev-refresh-secret-change-me";
+
+const JWT_SECRET_MIN_LENGTH = 32;
+
 export interface AppEnv {
   nodeEnv: string;
   port: number;
@@ -38,6 +44,45 @@ export interface AppEnv {
   telemetryEnabled: boolean;
 }
 
+function resolveJwtSecrets(nodeEnv: string): { access: string; refresh: string } {
+  const accessRaw = process.env.JWT_ACCESS_SECRET?.trim() || "";
+  const refreshRaw = process.env.JWT_REFRESH_SECRET?.trim() || "";
+  const isDev = nodeEnv === "development";
+
+  if (isDev) {
+    const access = accessRaw || DEV_JWT_ACCESS_SECRET;
+    const refresh = refreshRaw || DEV_JWT_REFRESH_SECRET;
+    if (!accessRaw || !refreshRaw || access === DEV_JWT_ACCESS_SECRET || refresh === DEV_JWT_REFRESH_SECRET) {
+      console.warn(
+        "[env] Avertissement : secrets JWT de développement utilisés. Définir JWT_ACCESS_SECRET et JWT_REFRESH_SECRET (≥ 32 caractères, distincts) avant tout déploiement."
+      );
+    }
+    return { access, refresh };
+  }
+
+  if (!accessRaw || !refreshRaw) {
+    throw new Error(
+      "JWT_ACCESS_SECRET et JWT_REFRESH_SECRET sont obligatoires hors développement (valeurs absentes)."
+    );
+  }
+  if (accessRaw === DEV_JWT_ACCESS_SECRET || refreshRaw === DEV_JWT_REFRESH_SECRET) {
+    throw new Error(
+      "JWT_ACCESS_SECRET / JWT_REFRESH_SECRET ne doivent pas utiliser les valeurs de développement hors développement."
+    );
+  }
+  if (accessRaw === refreshRaw) {
+    throw new Error(
+      "JWT_ACCESS_SECRET et JWT_REFRESH_SECRET doivent être distincts."
+    );
+  }
+  if (accessRaw.length < JWT_SECRET_MIN_LENGTH || refreshRaw.length < JWT_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `JWT_ACCESS_SECRET et JWT_REFRESH_SECRET doivent contenir au moins ${JWT_SECRET_MIN_LENGTH} caractères.`
+    );
+  }
+  return { access: accessRaw, refresh: refreshRaw };
+}
+
 export function loadEnv(): AppEnv {
   const nodeEnv = process.env.NODE_ENV ?? "development";
   const corsRaw = process.env.CORS_ORIGINS?.trim();
@@ -46,14 +91,16 @@ export function loadEnv(): AppEnv {
       ? corsRaw.split(",").map((s) => s.trim()).filter(Boolean)
       : [];
 
+  const jwt = resolveJwtSecrets(nodeEnv);
+
   return {
     nodeEnv,
     port: optionalInt("PORT", process.env.PORT, 4000),
     corsOrigins,
     defaultTenantId: process.env.DEFAULT_TENANT_ID?.trim() || "default",
     distanceMatrixApiKey: process.env.DISTANCE_MATRIX_API_KEY?.trim() || undefined,
-    jwtAccessSecret: process.env.JWT_ACCESS_SECRET?.trim() || "dev-access-secret-change-me",
-    jwtRefreshSecret: process.env.JWT_REFRESH_SECRET?.trim() || "dev-refresh-secret-change-me",
+    jwtAccessSecret: jwt.access,
+    jwtRefreshSecret: jwt.refresh,
     accessTokenTtlSec: optionalInt("JWT_ACCESS_TTL_SEC", process.env.JWT_ACCESS_TTL_SEC, 900),
     refreshTokenTtlSec: optionalInt(
       "JWT_REFRESH_TTL_SEC",
