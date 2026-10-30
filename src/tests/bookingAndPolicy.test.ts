@@ -100,7 +100,7 @@ describe("limiteur de débit des endpoints publics", () => {
     let passed = 0;
     for (let i = 0; i < 5; i += 1) {
       const r = res();
-      limiter({ ip: "1.2.3.4" } as never, r as never, () => { passed += 1; });
+      limiter({ ip: "1.2.3.4", header: () => undefined } as never, r as never, () => { passed += 1; });
       if (i >= 3) {
         assert.equal(r.code, 429);
         assert.ok(r.headers["Retry-After"]);
@@ -109,7 +109,58 @@ describe("limiteur de débit des endpoints publics", () => {
     assert.equal(passed, 3);
     // une autre IP n'est pas impactée
     let other = 0;
-    limiter({ ip: "5.6.7.8" } as never, res() as never, () => { other += 1; });
+    limiter({ ip: "5.6.7.8", header: () => undefined } as never, res() as never, () => { other += 1; });
     assert.equal(other, 1);
+  });
+
+  it("requireClientIpHeader : sans X-Client-Ip, ne bloque jamais (BFF partagé)", () => {
+    const limiter = createRateLimiter({ windowMs: 60_000, max: 1, key: "bff", requireClientIpHeader: true });
+    const res = () => {
+      const r = { code: 0, headers: {} as Record<string, string>, setHeader(k: string, v: string) { this.headers[k] = v; }, status(c: number) { this.code = c; return this; }, json() { return this; } };
+      return r;
+    };
+    let passed = 0;
+    for (let i = 0; i < 5; i += 1) {
+      limiter({ ip: "10.0.0.1", header: () => undefined } as never, res() as never, () => { passed += 1; });
+    }
+    assert.equal(passed, 5);
+  });
+
+  it("requireClientIpHeader : avec X-Client-Ip, limite par visiteur", () => {
+    const limiter = createRateLimiter({ windowMs: 60_000, max: 2, key: "bff", requireClientIpHeader: true });
+    const res = () => {
+      const r = { code: 0, headers: {} as Record<string, string>, setHeader(k: string, v: string) { this.headers[k] = v; }, status(c: number) { this.code = c; return this; }, json() { return this; } };
+      return r;
+    };
+    const hdr = (name: string) => (name.toLowerCase() === "x-client-ip" ? "203.0.113.10" : undefined);
+    let passed = 0;
+    for (let i = 0; i < 4; i += 1) {
+      const r = res();
+      limiter({ ip: "10.0.0.1", header: hdr } as never, r as never, () => { passed += 1; });
+      if (i >= 2) assert.equal(r.code, 429);
+    }
+    assert.equal(passed, 2);
+  });
+
+  it("login : clé IP + e-mail isole les comptes", () => {
+    const limiter = createRateLimiter({
+      windowMs: 60_000,
+      max: 1,
+      key: "auth-login",
+      keyFrom: (req) => `auth-login:${req.ip}:${String((req.body as { email?: string })?.email ?? "").toLowerCase()}`,
+    });
+    const res = () => {
+      const r = { code: 0, headers: {} as Record<string, string>, setHeader(k: string, v: string) { this.headers[k] = v; }, status(c: number) { this.code = c; return this; }, json() { return this; } };
+      return r;
+    };
+    let a = 0;
+    limiter({ ip: "1.1.1.1", body: { email: "a@x.com" }, header: () => undefined } as never, res() as never, () => { a += 1; });
+    const r2 = res();
+    limiter({ ip: "1.1.1.1", body: { email: "a@x.com" }, header: () => undefined } as never, r2 as never, () => { a += 1; });
+    assert.equal(r2.code, 429);
+    let b = 0;
+    limiter({ ip: "1.1.1.1", body: { email: "b@x.com" }, header: () => undefined } as never, res() as never, () => { b += 1; });
+    assert.equal(a, 1);
+    assert.equal(b, 1);
   });
 });
