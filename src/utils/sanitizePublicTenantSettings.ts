@@ -22,7 +22,7 @@ const FORBIDDEN_SECRET_KEYS_LOWER = new Set([
 
 /** Champs e-mail / routage internes à ne jamais exposer sur l’endpoint public. */
 const INTERNAL_EMAIL_FIELD_KEYS_LOWER = new Set([
-  "operatorextracipientemail",
+  "operatorextrarecipientemail",
   "mail_to",
   "mail_to_copy",
   "mail_reply_to",
