@@ -33,6 +33,8 @@ function buildAuditPricingConfig(overrides?: {
   const approachPricePerKm = overrides?.approachPricePerKm ?? 2;
   const outOfZoneMultiplier = overrides?.outOfZoneMultiplier ?? 1;
   const oneWayPricePerKm = overrides?.oneWayPricePerKm ?? 2;
+  /** 0 €/km d'approche = désactivation explicite (mode none), pas un tarif actif à 0. */
+  const approachEnabled = approachPricePerKm > 0;
   return {
     version: "v1",
     currency: "EUR",
@@ -63,11 +65,15 @@ function buildAuditPricingConfig(overrides?: {
           enabled: true,
         },
       ],
-      approach: { enabled: true, mode: "always_approach", pricePerKm: approachPricePerKm },
+      approach: {
+        enabled: approachEnabled,
+        mode: approachEnabled ? "always_approach" : "none",
+        pricePerKm: approachEnabled ? approachPricePerKm : 0,
+      },
       returnToBase: {
-        enabled: returnToBaseEnabled,
-        mode: returnToBaseEnabled ? "always_return_base" : "none",
-        pricePerKm: approachPricePerKm,
+        enabled: returnToBaseEnabled && approachEnabled,
+        mode: returnToBaseEnabled && approachEnabled ? "always_return_base" : "none",
+        pricePerKm: approachEnabled ? approachPricePerKm : 0,
       },
       outOfPrimaryZone: { enabled: true, mode: "multiplier", value: outOfZoneMultiplier, zoneSetId: "fr-76" },
     },

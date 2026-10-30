@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { PricingConfigRequestError } from "../modules/pricing";
+import { PricingCalculationError, PricingConfigRequestError } from "../modules/pricing";
 import { PricingService } from "../services/pricing.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
@@ -89,6 +89,10 @@ export async function postCalculerTarif(
         : {}),
     });
   } catch (e) {
+    if (e instanceof PricingCalculationError) {
+      sendValidationError(res, e.message);
+      return;
+    }
     if (e instanceof PricingConfigRequestError) {
       void trackFromRequest({
         tenantId: req.tenantId,

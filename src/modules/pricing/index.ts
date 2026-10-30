@@ -9,6 +9,7 @@ export {
   isInOperatorServiceArea,
   shouldApplyOutOfZoneMultiplier,
   resolveVtcBaseAddress,
+  PricingCalculationError,
 } from "./calculator";
 export { serializeTarifResult } from "./serialize";
 export type {

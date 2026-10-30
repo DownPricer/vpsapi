@@ -10,6 +10,11 @@
  */
 
 import { collectEncodingCorruptionPaths } from "../utils/tenantSettingsEncoding";
+import { buildPricingConfigFromProSettings } from "../modules/pricing/buildPricingConfigFromProSettings";
+import {
+  PricingConfigValidationError,
+  validatePricingConfigPayload,
+} from "../modules/pricing/validatePricingConfigPayload";
 
 /** Taille max du JSON sérialisé (UTF-8), sous la limite globale express.json (1 Mo). */
 export const TENANT_SETTINGS_MAX_SERIALIZED_BYTES = 512 * 1024;
@@ -105,6 +110,22 @@ export function validateTenantSettingsPayload(input: unknown): TenantSettingsVal
     value = JSON.parse(serialized) as Record<string, unknown>;
   } catch {
     return { ok: false, message: "« settings » JSON invalide après contrôle." };
+  }
+
+  try {
+    const pricingPayload = buildPricingConfigFromProSettings(value);
+    if (pricingPayload) {
+      validatePricingConfigPayload(pricingPayload);
+    }
+  } catch (e) {
+    if (e instanceof PricingConfigValidationError) {
+      return {
+        ok: false,
+        message: "Configuration tarifaire invalide dans « settings.pricing ».",
+        details: e.details ?? e.message,
+      };
+    }
+    throw e;
   }
 
   return { ok: true, value };
