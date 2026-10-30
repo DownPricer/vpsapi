@@ -383,6 +383,27 @@ suite("intégration (PostgreSQL jetable)", () => {
       assert.equal((await prisma.leadRequest.findUniqueOrThrow({ where: { id: lead.id } })).status, "accepted");
     });
 
+    it("remboursement Stripe incertain : la réservation n'est PAS annulée (réessayer avec le même clientRequestId)", async () => {
+      const lead = await seedLead(T1);
+      const pay = await seedPayment(T1, lead.id);
+      const gw = new helpers.FakeGateway();
+      gw.addCharge(pay.stripePaymentIntentId!, ACCT1, 10_000, 500);
+      gw.nextCreateFailure = "network";
+      install(gw);
+      const clientRequestId = "it-uncertain-0001";
+      await assert.rejects(
+        cancelSvc.cancelBooking(base(lead.id, { refund: { mode: "full" }, refundConfirmed: true, clientRequestId })),
+        (e: unknown) => e instanceof cancelSvc.BookingCancellationError && e.code === "REFUND_UNCERTAIN"
+      );
+      assert.equal((await prisma.leadRequest.findUniqueOrThrow({ where: { id: lead.id } })).status, "accepted");
+      // Retry avec la même clé : le remboursement se confirme et l'annulation aboutit.
+      const ok = await cancelSvc.cancelBooking(
+        base(lead.id, { refund: { mode: "full" }, refundConfirmed: true, clientRequestId })
+      );
+      assert.equal(ok.lead.status, "cancelled");
+      assert.equal(ok.refundUncertain, false);
+    });
+
     it("demande d'un autre tenant : introuvable", async () => {
       const lead = await seedLead(T2);
       install(new helpers.FakeGateway());

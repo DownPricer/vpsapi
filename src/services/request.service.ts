@@ -1,9 +1,19 @@
-import type { LeadKind, LeadRequest, LeadStatus, Prisma } from "@prisma/client";
-import { PaymentStatus } from "@prisma/client";
+import { LeadStatus, PaymentStatus, type LeadKind, type LeadRequest, type Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { trackPlatformEvent } from "../platform/telemetry.service";
 import { buildPolicySnapshot, parseStoredPolicy } from "./cancellationPolicy";
 import { isBlockingStatus, syncLeadOccupation } from "./vehicleAvailability.service";
+
+export class RequestStatusTransitionError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly httpStatus: number = 400
+  ) {
+    super(message);
+    this.name = "RequestStatusTransitionError";
+  }
+}
 
 export type CreateLeadInput = {
   tenantId: string;
@@ -191,6 +201,17 @@ export class RequestService {
     | { ok: true; noop: false; lead: LeadRequest; previousStatus: LeadStatus }
     | null
   > {
+    if (
+      params.nextStatus === LeadStatus.cancelled ||
+      params.nextStatus === LeadStatus.cancellation_requested
+    ) {
+      throw new RequestStatusTransitionError(
+        "STATUS_VIA_CANCEL_FLOW",
+        "Les statuts d'annulation ne peuvent pas être posés via PATCH /status. Utilisez POST /api/pro/demandes/:id/cancel (ou le parcours client sécurisé pour une demande d'annulation).",
+        400
+      );
+    }
+
     const lead = await prisma.leadRequest.findFirst({
       where: { id: params.leadId, tenantId: params.tenantId },
     });
