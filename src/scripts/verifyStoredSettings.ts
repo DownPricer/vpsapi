@@ -116,7 +116,6 @@ async function loadFromDatabase(): Promise<Array<{ slug: string; settings: unkno
     const { prisma } = await import("../db/prisma");
     const rows = await prisma.tenant.findMany({
       select: { id: true, slug: true, settings: true },
-      where: { settings: { not: null } },
     });
     return rows
       .filter((r) => r.settings != null)

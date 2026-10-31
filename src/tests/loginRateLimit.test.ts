@@ -51,7 +51,7 @@ function buildLoginStack(opts?: { ipMax?: number; emailMax?: number }) {
   return combineRateLimiters(byIp, byEmail);
 }
 
-function spoofingReq(ip: string, email: string, spoofIp: string, n: number): Request {
+function spoofingReq(ip: string, email: string, spoofIp: string): Request {
   const headers: Record<string, string> = {
     "x-client-ip": spoofIp,
     "x-forwarded-for": spoofIp,

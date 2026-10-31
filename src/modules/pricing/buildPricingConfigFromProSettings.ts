@@ -37,7 +37,7 @@ type ProPricing = {
 };
 
 function loadDefaultEngine(): TenantPricingEngineConfig {
-  return defaultEngineJson as TenantPricingEngineConfig;
+  return defaultEngineJson as unknown as TenantPricingEngineConfig;
 }
 
 function resolveVtcBase(settings: Record<string, unknown>, engine: TenantPricingEngineConfig): string {
