@@ -122,6 +122,15 @@ describe("QA hardening — validation pricingConfig", () => {
     assert.throws(() => validatePricingConfigPayload(p), PricingConfigValidationError);
   });
 
+  it("accepte approche et retour dépôt offerts (0 €/km) si la grille principale est > 0", () => {
+    const p = auditLikePayload();
+    (p.classicTrip as any).approach.pricePerKm = 0;
+    (p.classicTrip as any).returnToBase.pricePerKm = 0;
+    assert.doesNotThrow(() => validatePricingConfigPayload(p));
+    (p.classicTrip as any).approach.pricePerKm = -1;
+    assert.throws(() => validatePricingConfigPayload(p), PricingConfigValidationError, "un prix négatif reste refusé");
+  });
+
   it("refuse remise A/R ≥ 100 %", () => {
     const p = auditLikePayload();
     (p.discounts as any)[0].value = 100;

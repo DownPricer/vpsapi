@@ -356,14 +356,8 @@ const pricingConfigPayloadSchema = z
       );
     }
 
-    const approach = value.classicTrip.approach;
-    if (approach.enabled && approach.mode !== "none") {
-      rejectNonPositive("classicTrip.approach.pricePerKm", approach.pricePerKm, "classicTrip.approach.pricePerKm");
-    }
-    const ret = value.classicTrip.returnToBase;
-    if (ret.enabled && ret.mode !== "none") {
-      rejectNonPositive("classicTrip.returnToBase.pricePerKm", ret.pricePerKm, "classicTrip.returnToBase.pricePerKm");
-    }
+    // Approche et retour dépôt peuvent être offerts (0 €/km) : un choix tarifaire légitime tant que la grille
+    // principale est > 0 (le calculateur refuse de toute façon un total ≤ 0). Le schéma garantit déjà fini et ≥ 0.
 
     const out = value.classicTrip.outOfPrimaryZone;
     if (out.enabled && out.mode === "multiplier" && !(out.value >= 1)) {
