@@ -28,6 +28,8 @@ export const DEV_JWT_REFRESH_SECRET = "dev-refresh-secret-change-me";
 
 const JWT_SECRET_MIN_LENGTH = 32;
 
+export type PublicRateLimitMode = "off" | "trusted" | "strict";
+
 export interface AppEnv {
   nodeEnv: string;
   port: number;
@@ -42,6 +44,9 @@ export interface AppEnv {
   platformAdminEnabled: boolean;
   platformSessionSecret: string;
   telemetryEnabled: boolean;
+  /** Secret partagé BFF→API (≥ 32 car. si défini). Jamais loggé. */
+  bffSharedSecret: string | undefined;
+  publicRateLimit: PublicRateLimitMode;
 }
 
 function resolveJwtSecrets(nodeEnv: string): { access: string; refresh: string } {
@@ -92,6 +97,14 @@ export function loadEnv(): AppEnv {
       : [];
 
   const jwt = resolveJwtSecrets(nodeEnv);
+  const bffRaw = process.env.BFF_SHARED_SECRET?.trim() || "";
+  if (bffRaw && bffRaw.length < 32) {
+    throw new Error("BFF_SHARED_SECRET doit contenir au moins 32 caractères s'il est défini.");
+  }
+  const publicRateLimitRaw = (process.env.PUBLIC_RATE_LIMIT?.trim().toLowerCase() || "trusted") as string;
+  if (publicRateLimitRaw !== "off" && publicRateLimitRaw !== "trusted" && publicRateLimitRaw !== "strict") {
+    throw new Error('PUBLIC_RATE_LIMIT doit être "off", "trusted" ou "strict".');
+  }
 
   return {
     nodeEnv,
@@ -111,6 +124,8 @@ export function loadEnv(): AppEnv {
     platformAdminEnabled: optionalBool(process.env.PLATFORM_ADMIN_ENABLED, false),
     platformSessionSecret: process.env.PLATFORM_SESSION_SECRET?.trim() || "",
     telemetryEnabled: optionalBool(process.env.TELEMETRY_ENABLED, false),
+    bffSharedSecret: bffRaw || undefined,
+    publicRateLimit: publicRateLimitRaw as PublicRateLimitMode,
   };
 }
 

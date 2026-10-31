@@ -1,14 +1,7 @@
 import { Router } from "express";
 import { postReservation } from "../controllers/reservation.controller";
-import { createRateLimiter } from "../middleware/rateLimit";
+import { createPublicRouteRateLimiter } from "../middleware/publicRateLimit";
 
 export const reservationRoutes = Router();
 
-const reservationLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  max: 10,
-  key: "reservation",
-  requireClientIpHeader: true,
-});
-
-reservationRoutes.post("/", reservationLimiter, postReservation);
+reservationRoutes.post("/", createPublicRouteRateLimiter("reservation", 10), postReservation);
