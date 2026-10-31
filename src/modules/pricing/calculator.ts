@@ -177,6 +177,15 @@ function majFrom(
   return { amount, reasons };
 }
 
+/** Erreur métier : tarif calculé inutilisable (≤ 0 €). */
+export class PricingCalculationError extends Error {
+  readonly code = "PRICING_INVALID_TOTAL";
+  constructor(message: string) {
+    super(message);
+    this.name = "PricingCalculationError";
+  }
+}
+
 function readManualMaj(
   payload: Record<string, unknown>,
   key: string
@@ -184,7 +193,30 @@ function readManualMaj(
   const v = Number(
     (payload?.general as Record<string, unknown>)?.[key] ?? (payload as Record<string, unknown>)?.[key]
   );
-  return Number.isFinite(v) ? v : null;
+  if (!Number.isFinite(v) || v < 0) return null;
+  return v;
+}
+
+/** Supplément €/km trajet client — défauts historiques si non configuré. */
+function resolveTrajetKmSupplement(trajetKm: number, engine: TenantPricingEngineConfig): number {
+  const cfg = engine.classicKmSupplement;
+  if (cfg && cfg.enabled === false) return 0;
+  const shortFrom = cfg?.shortFromKm ?? 1;
+  const shortTo = cfg?.shortToKm ?? 50;
+  const shortAdd = cfg?.shortAddPerKm ?? 0.2;
+  const otherAdd = cfg?.otherAddPerKm ?? 0.1;
+  if (trajetKm >= shortFrom && trajetKm <= shortTo) return shortAdd;
+  return otherAdd;
+}
+
+function finalizeTarifEuros(total: number): number {
+  const tarif = Math.ceil(total);
+  if (!(tarif > 0)) {
+    throw new PricingCalculationError(
+      "Le tarif calculé est invalide (≤ 0 €). Vérifiez la configuration tarifaire."
+    );
+  }
+  return tarif;
 }
 
 export function buildGcalUrl(
@@ -367,10 +399,11 @@ export async function calculerTarif(
     tarifs.total = total;
 
     const creneaux = await calculerCreneaux(payload, distances, engine);
+    const tarif = finalizeTarifEuros(total);
     return {
-      tarif: Math.ceil(total),
+      tarif,
       distances,
-      tarifs,
+      tarifs: { ...tarifs, total: tarif },
       majorations,
       vehicleBasis: emptyBasis(),
       ...creneaux,
@@ -394,7 +427,7 @@ export async function calculerTarif(
     const retourBaseKm = distances.aller.retourBase.km ?? 0;
     const retourBaseCoef = engine.returnToBaseEnabled !== false ? apCoef : 0;
 
-    const supplementTrajet = trajetKm >= 1 && trajetKm <= 50 ? 0.2 : 0.1;
+    const supplementTrajet = resolveTrajetKmSupplement(trajetKm, engine);
     (tarifs.aller as Record<string, number>).approche = approcheKm * apCoef;
     (tarifs.aller as Record<string, number>).trajet =
       trajetKm * (tKmAller + supplementTrajet);
@@ -418,7 +451,7 @@ export async function calculerTarif(
       const retourBaseCoefAr = engine.returnToBaseEnabled !== false ? apCoefAr : 0;
 
       (tarifs.retour as Record<string, number>).approche = approcheRetourKm * apCoefAr;
-      const supplementRetour = trajetRetourKm >= 1 && trajetRetourKm <= 50 ? 0.2 : 0.1;
+      const supplementRetour = resolveTrajetKmSupplement(trajetRetourKm, engine);
       (tarifs.retour as Record<string, number>).trajet =
         trajetRetourKm * (tKmRetour + supplementRetour);
       (tarifs.retour as Record<string, number>).retourBase = retourBaseRetourKm * retourBaseCoefAr;
@@ -514,10 +547,11 @@ export async function calculerTarif(
       kmAmount: kmAmountRaw * kmFactor,
     };
     const creneaux = await calculerCreneaux(payload, distances, engine);
+    const tarif = finalizeTarifEuros(tarifs.total as number);
     return {
-      tarif: Math.ceil(tarifs.total as number),
+      tarif,
       distances,
-      tarifs,
+      tarifs: { ...tarifs, total: tarif },
       majorations,
       vehicleBasis,
       ...creneaux,
@@ -608,6 +642,11 @@ export async function calculerTarif(
     };
     const creneaux = await calculerCreneaux(payload, distances, engine);
     const arrondi = ceil5(tarifs.total as number);
+    if (!(arrondi > 0)) {
+      throw new PricingCalculationError(
+        "Le tarif calculé est invalide (≤ 0 €). Vérifiez la configuration tarifaire."
+      );
+    }
     return {
       tarif: arrondi,
       distances,
@@ -618,12 +657,7 @@ export async function calculerTarif(
     } as TarifResult;
   }
 
-  const creneaux = await calculerCreneaux(payload, distances, engine);
-  return {
-    tarif: 0,
-    distances,
-    tarifs,
-    majorations,
-    ...creneaux,
-  } as TarifResult;
+  throw new PricingCalculationError(
+    "Type de service inconnu : impossible de calculer un tarif."
+  );
 }

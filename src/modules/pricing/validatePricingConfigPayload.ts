@@ -310,6 +310,124 @@ const pricingConfigPayloadSchema = z
         }
       }
     }
+
+    const rejectNonPositive = (path: string, n: number, label: string) => {
+      if (!(typeof n === "number" && Number.isFinite(n) && n > 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label} doit etre strictement positif (> 0).`,
+          path: path.split("."),
+        });
+      }
+    };
+
+    for (const [i, rule] of value.classicTrip.distanceRulesOneWay.entries()) {
+      if (!rule.enabled) continue;
+      rejectNonPositive(`classicTrip.distanceRulesOneWay.${i}.pricePerKm`, rule.pricePerKm, "classicTrip.distanceRulesOneWay.pricePerKm");
+      if (rule.minimumPrice !== undefined) {
+        rejectNonPositive(
+          `classicTrip.distanceRulesOneWay.${i}.minimumPrice`,
+          rule.minimumPrice,
+          "classicTrip.distanceRulesOneWay.minimumPrice"
+        );
+      }
+    }
+    for (const [i, rule] of value.classicTrip.distanceRulesRoundTrip.entries()) {
+      if (!rule.enabled) continue;
+      rejectNonPositive(`classicTrip.distanceRulesRoundTrip.${i}.pricePerKm`, rule.pricePerKm, "classicTrip.distanceRulesRoundTrip.pricePerKm");
+      if (rule.minimumPrice !== undefined) {
+        rejectNonPositive(
+          `classicTrip.distanceRulesRoundTrip.${i}.minimumPrice`,
+          rule.minimumPrice,
+          "classicTrip.distanceRulesRoundTrip.minimumPrice"
+        );
+      }
+    }
+    for (const [i, band] of value.classicTrip.zoneBands.entries()) {
+      if (!band.enabled) continue;
+      rejectNonPositive(`classicTrip.zoneBands.${i}.minimumPrice`, band.minimumPrice, "classicTrip.zoneBands.minimumPrice");
+    }
+    for (const [i, band] of (value.classicTrip.zoneBandsRoundTrip ?? []).entries()) {
+      if (!band.enabled) continue;
+      rejectNonPositive(
+        `classicTrip.zoneBandsRoundTrip.${i}.minimumPrice`,
+        band.minimumPrice,
+        "classicTrip.zoneBandsRoundTrip.minimumPrice"
+      );
+    }
+
+    const approach = value.classicTrip.approach;
+    if (approach.enabled && approach.mode !== "none") {
+      rejectNonPositive("classicTrip.approach.pricePerKm", approach.pricePerKm, "classicTrip.approach.pricePerKm");
+    }
+    const ret = value.classicTrip.returnToBase;
+    if (ret.enabled && ret.mode !== "none") {
+      rejectNonPositive("classicTrip.returnToBase.pricePerKm", ret.pricePerKm, "classicTrip.returnToBase.pricePerKm");
+    }
+
+    const out = value.classicTrip.outOfPrimaryZone;
+    if (out.enabled && out.mode === "multiplier" && !(out.value >= 1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "classicTrip.outOfPrimaryZone.value doit etre >= 1 en mode multiplicateur.",
+        path: ["classicTrip", "outOfPrimaryZone", "value"],
+      });
+    }
+
+    if (value.hourlyHire.enabled) {
+      if (value.hourlyHire.minimumTotal !== undefined) {
+        rejectNonPositive("hourlyHire.minimumTotal", value.hourlyHire.minimumTotal, "hourlyHire.minimumTotal");
+      }
+      for (const [i, rule] of value.hourlyHire.rateRules.entries()) {
+        if (!rule.enabled) continue;
+        rejectNonPositive(`hourlyHire.rateRules.${i}.hourlyRate`, rule.hourlyRate, "hourlyHire.rateRules.hourlyRate");
+      }
+    }
+
+    if (value.airportTransfers.enabled) {
+      for (const [ai, airport] of value.airportTransfers.rules.entries()) {
+        if (!airport.enabled) continue;
+        for (const [bi, band] of airport.oneWay.entries()) {
+          rejectNonPositive(
+            `airportTransfers.rules.${ai}.oneWay.${bi}.pricePerKm`,
+            band.pricePerKm,
+            "airportTransfers.oneWay.pricePerKm"
+          );
+          rejectNonPositive(
+            `airportTransfers.rules.${ai}.oneWay.${bi}.minimumPrice`,
+            band.minimumPrice,
+            "airportTransfers.oneWay.minimumPrice"
+          );
+        }
+        for (const [bi, band] of airport.roundTrip.entries()) {
+          rejectNonPositive(
+            `airportTransfers.rules.${ai}.roundTrip.${bi}.pricePerKm`,
+            band.pricePerKm,
+            "airportTransfers.roundTrip.pricePerKm"
+          );
+          rejectNonPositive(
+            `airportTransfers.rules.${ai}.roundTrip.${bi}.minimumPrice`,
+            band.minimumPrice,
+            "airportTransfers.roundTrip.minimumPrice"
+          );
+        }
+      }
+    }
+
+    for (const [i, discount] of value.discounts.entries()) {
+      if (
+        discount.enabled &&
+        discount.trigger === "round_trip" &&
+        discount.mode === "percent" &&
+        discount.value >= 100
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "La remise aller-retour ne peut pas atteindre 100 % (prix nul).",
+          path: ["discounts", String(i), "value"],
+        });
+      }
+    }
   });
 
 export class PricingConfigValidationError extends Error {

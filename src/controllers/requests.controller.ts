@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { LeadKind, LeadStatus } from "@prisma/client";
 import { z } from "zod";
 import { sendCustomerDecisionMail } from "../modules/email/customerDecisionMail";
-import { RequestService } from "../services/request.service";
+import { RequestService, RequestStatusTransitionError } from "../services/request.service";
 
 const requestService = new RequestService();
 
@@ -96,6 +96,10 @@ export async function patchRequestStatus(req: Request, res: Response, next: Next
       meta: { unchanged: false, customerNotification },
     });
   } catch (e) {
+    if (e instanceof RequestStatusTransitionError) {
+      res.status(e.httpStatus).json({ success: false, error: { code: e.code, message: e.message } });
+      return;
+    }
     next(e);
   }
 }

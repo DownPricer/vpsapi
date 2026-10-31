@@ -190,7 +190,12 @@ suite("flotte & disponibilités (PostgreSQL jetable)", () => {
       const lead = await seedLead(TA, v.id, "2099-05-10T08:00:00Z");
       await accept(TA, lead.id);
       await assert.rejects(V.archiveVehicle(TA, v.id), (e: { code?: string }) => e.code === "HAS_UPCOMING_BOOKINGS");
-      await reqs.updateStatus({ tenantId: TA, leadId: lead.id, nextStatus: "cancelled", changedByUserId: UA });
+      // Annulation hors PATCH /status (route dédiée) : mise à jour directe pour libérer le véhicule en test.
+      await prisma.leadRequest.update({
+        where: { id: lead.id },
+        data: { status: "cancelled", cancelledAt: new Date() },
+      });
+      await A.syncLeadOccupation(prisma, lead.id);
       const archived = await V.archiveVehicle(TA, v.id);
       assert.equal(archived.archived, true);
       assert.equal(archived.active, false);
@@ -319,7 +324,11 @@ suite("flotte & disponibilités (PostgreSQL jetable)", () => {
       assert.equal(bStill.status, "pending", "statut inchangé après refus");
       assert.equal(await prisma.leadStatusHistory.count({ where: { leadId: b.id, newStatus: "accepted" } }), 0);
 
-      await reqs.updateStatus({ tenantId: TA, leadId: a.id, nextStatus: "cancelled", changedByUserId: UA });
+      await prisma.leadRequest.update({
+        where: { id: a.id },
+        data: { status: "cancelled", cancelledAt: new Date() },
+      });
+      await A.syncLeadOccupation(prisma, a.id);
       assert.deepEqual(await occupied(v.id), [], "véhicule libéré");
       assert.equal(await prisma.leadRequest.count({ where: { id: a.id } }), 1, "historique conservé");
 
@@ -331,7 +340,11 @@ suite("flotte & disponibilités (PostgreSQL jetable)", () => {
       const v = await mkVehicle(TA, "Annulation demandée");
       const a = await seedLead(TA, v.id, "2026-12-01T09:00:00Z");
       await accept(TA, a.id);
-      await reqs.updateStatus({ tenantId: TA, leadId: a.id, nextStatus: "cancellation_requested", changedByUserId: UA });
+      await prisma.leadRequest.update({
+        where: { id: a.id },
+        data: { status: "cancellation_requested" },
+      });
+      await A.syncLeadOccupation(prisma, a.id);
       assert.deepEqual(await occupied(v.id), ["2026-12-01"]);
     });
 

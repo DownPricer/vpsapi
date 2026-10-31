@@ -212,6 +212,16 @@ export function mapPricingConfigToEngine(payload: PricingConfigPayload): TenantP
     madEventMinimumTotal: payload.hourlyHire.minimumTotal ?? 0,
     // TODO: le payload v1 n'expose pas encore ce champ; valeur neutre conservée.
     calendarEventTitlePrefix: "Course VTC",
+    classicKmSupplement: payload.classicTrip.supplementShortDistance
+      ? {
+          enabled: payload.classicTrip.supplementShortDistance.enabled,
+          shortFromKm: payload.classicTrip.supplementShortDistance.fromKm,
+          shortToKm: payload.classicTrip.supplementShortDistance.toKm,
+          shortAddPerKm: payload.classicTrip.supplementShortDistance.addPricePerKm,
+          /** Hors bande courte : conserve le comportement historique (0,1 €/km). */
+          otherAddPerKm: 0.1,
+        }
+      : undefined,
   };
 }
 

@@ -91,25 +91,42 @@ describe("conditions d'annulation", () => {
 });
 
 describe("limiteur de débit des endpoints publics", () => {
+  function mockRes() {
+    return {
+      code: 0,
+      headers: {} as Record<string, string>,
+      setHeader(k: string, v: string) {
+        this.headers[k] = v;
+      },
+      status(c: number) {
+        this.code = c;
+        return this;
+      },
+      json() {
+        return this;
+      },
+    };
+  }
+
   it("bloque après le quota par IP puis renvoie 429 avec Retry-After", () => {
     const limiter = createRateLimiter({ windowMs: 60_000, max: 3, key: "t" });
-    const res = () => {
-      const r = { code: 0, headers: {} as Record<string, string>, setHeader(k: string, v: string) { this.headers[k] = v; }, status(c: number) { this.code = c; return this; }, json() { return this; } };
-      return r;
-    };
     let passed = 0;
     for (let i = 0; i < 5; i += 1) {
-      const r = res();
-      limiter({ ip: "1.2.3.4" } as never, r as never, () => { passed += 1; });
+      const r = mockRes();
+      limiter({ ip: "1.2.3.4", header: () => undefined } as never, r as never, () => {
+        passed += 1;
+      });
       if (i >= 3) {
         assert.equal(r.code, 429);
         assert.ok(r.headers["Retry-After"]);
       }
     }
     assert.equal(passed, 3);
-    // une autre IP n'est pas impactée
     let other = 0;
-    limiter({ ip: "5.6.7.8" } as never, res() as never, () => { other += 1; });
+    limiter({ ip: "5.6.7.8", header: () => undefined } as never, mockRes() as never, () => {
+      other += 1;
+    });
     assert.equal(other, 1);
   });
 });
+

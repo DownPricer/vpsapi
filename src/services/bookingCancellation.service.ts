@@ -25,6 +25,22 @@ export class BookingCancellationError extends Error {
   }
 }
 
+/**
+ * Convertit une erreur de remboursement en erreur d'annulation.
+ * STRIPE_UNCERTAIN → REFUND_UNCERTAIN (502) : ne jamais annuler la réservation ;
+ * le client doit réessayer avec le même clientRequestId.
+ */
+export function mapRefundFailureToCancellationError(e: unknown): never {
+  if (e instanceof RefundServiceError && e.code === "STRIPE_UNCERTAIN") {
+    throw new BookingCancellationError(
+      "REFUND_UNCERTAIN",
+      "Le remboursement Stripe n'a pas pu être confirmé. Ne réessayez pas avec un nouvel identifiant : renvoyez la même demande avec le même clientRequestId.",
+      502
+    );
+  }
+  throw e;
+}
+
 export type RefundPlan = { mode: "none" } | { mode: "full" } | { mode: "partial"; amountCents: number };
 
 const PAID_FAMILY: PaymentStatus[] = [
@@ -184,7 +200,6 @@ export async function cancelBooking(input: CancelBookingInput): Promise<CancelBo
 
   // 1) Remboursement (jamais implicite : confirmation explicite exigée).
   let refundResult: RequestRefundResult | null = null;
-  let refundUncertain = false;
   if (input.refund.mode !== "none") {
     if (!paid) {
       throw new BookingCancellationError("NO_PAID_PAYMENT", "Aucun paiement encaissé à rembourser pour cette réservation.", 409);
@@ -204,12 +219,8 @@ export async function cancelBooking(input: CancelBookingInput): Promise<CancelBo
         initiatedByUserId: input.actorUserId,
       });
     } catch (e) {
-      if (e instanceof RefundServiceError && e.code === "STRIPE_UNCERTAIN") {
-        refundUncertain = true;
-      } else {
-        // Rien n'est annulé : le chauffeur corrige puis recommence (même clientRequestId = même remboursement).
-        throw e;
-      }
+      // Rien n'est annulé tant que le remboursement n'est pas confirmé (refus ou état Stripe inconnu).
+      throw mapRefundFailureToCancellationError(e);
     }
   }
 
@@ -261,11 +272,11 @@ export async function cancelBooking(input: CancelBookingInput): Promise<CancelBo
       outcome: input.acceptRequest ? "accepted" : "cancelled_by_driver",
       reason: input.reason,
       operatorNote: input.operatorNote,
-      refundNote: refundNoteFor(refundResult, refundUncertain),
+      refundNote: refundNoteFor(refundResult, false),
     });
   }
 
-  return { lead: updated, refund: refundResult, refundUncertain, unpaidPaymentsCancelled, mail };
+  return { lead: updated, refund: refundResult, refundUncertain: false, unpaidPaymentsCancelled, mail };
 }
 
 /* -------------------------------------------------------------------------- */

@@ -20,6 +20,12 @@ export function createApp(): express.Application {
   const app = express();
 
   /**
+   * Derrière Nginx : un hop de proxy pour que `req.ip` / rate-limit voient l'IP client (X-Forwarded-For).
+   * Ne pas monter au-delà de 1 sans contrôle explicite des proxies (spoofing).
+   */
+  app.set("trust proxy", 1);
+
+  /**
    * CORS : sans liste CORS_ORIGINS, tout est accepté (comportement historique). Avec une liste, une origine
    * est acceptée si elle y figure ou si c'est un domaine actif d'un tenant (nouveaux clients sans redémarrage).
    */

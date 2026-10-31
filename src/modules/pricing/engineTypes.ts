@@ -65,4 +65,16 @@ export interface TenantPricingEngineConfig {
   madHourlyRates: MadHourlyRates;
   madEventMinimumTotal: number;
   calendarEventTitlePrefix: string;
+  /**
+   * Supplément €/km sur le trajet client (hors approche / retour dépôt).
+   * Absent → constantes historiques (0,2 €/km sur 1–50 km, sinon 0,1 €/km).
+   */
+  classicKmSupplement?: {
+    enabled: boolean;
+    shortFromKm: number;
+    shortToKm: number;
+    shortAddPerKm: number;
+    /** Appliqué hors bande courte (historique : 0,1). */
+    otherAddPerKm: number;
+  };
 }
