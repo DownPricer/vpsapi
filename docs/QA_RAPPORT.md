@@ -56,7 +56,7 @@ Le cœur tarifaire (verify scripts) et les unitaires remboursements/Stripe mock�
 | 5 | Double booking / DST / archive | **Non testable** | cas écrits dans `fleet.integration.test.ts` mais skip |
 | 6 | Isolation 2 tenants HTTP | **Non testable** (DB) ; revue code **OK partiel** | IDOR pro filtré par JWT+tenant ; spoof `X-Tenant-ID` sur public |
 | 6 | Sanitize settings publics | **KO** → **corrigé API** ✅ | typo clé e-mail interne — *LOT 4a* |
-| 6 | Rate-limit contact/devis/login | **KO** → **corrigé API (partiel BFF)** ✅ | seuls booking-view/cancel limités — *LOT 4b : login actif ; contact/devis/… attendent `X-Client-Ip`* |
+| 6 | Rate-limit contact/devis/login | **KO** → **corrigé API + revue spoof** ✅ | LOT 4b puis **P1/P2** : login = `req.ip` + plafond e-mail ; publics = `BFF_SHARED_SECRET` + `PUBLIC_RATE_LIMIT` |
 | 7 | Auth brute-force / rôles / JWT | **KO** → **JWT + rate-limit login corrigés** ✅ | pas de RBAC admin/agent (analyse seule) ; JWT défaut si env absente |
 | 8 | Injection / XSS e-mails | **OK** (unitaire) | échappement HTML motifs ; SQL non rejoué live |
 | 9 | Parcours navigateur Playwright | **Non testable** | pas d’API/front/DB/Stripe test locaux up |
@@ -301,8 +301,60 @@ Sources : [Parité calculateurs](21260c25-c0b1-49f4-8f87-f596161f82ab), [Isolati
 | 4a Sanitize | `Corrige le filtre public de operatorExtraRecipientEmail.` | `sanitizePublicTenantSettings.test.ts` |
 | 4b Rate-limit | `Ajoute des limiteurs de débit sans bloquer les sites via le BFF Next.` | extensions `bookingAndPolicy.test.ts` |
 
-`npm test` après lots : **133** pass (was 105).
+`npm test` après lots initiaux : **133** pass (was 105).
 
 ---
 
-*Fin du rapport — audit initial sans code ; §7 = correctifs API ultérieurs.*
+## 8. Revue post-correctifs (31/10/2026) — P1→P4
+
+### P1 — Contournement rate-limit login ✅
+- Login utilise uniquement `req.ip` (`trust proxy = 1`) ; ignore `X-Client-Ip` / `X-Forwarded-For` brut.
+- Plafond **par e-mail seul** : 10 / 15 min + plafond IP+e-mail : 20 / 15 min.
+- Tests : `loginRateLimit.test.ts`.
+
+### P2 — Limiteurs publics + BFF ✅ (API `fix/qa-securite` + front `fix/qa-front`)
+- API : `BFF_SHARED_SECRET` (≥ 32 si défini), `PUBLIC_RATE_LIMIT` = `off` | `trusted` (défaut) | `strict`.
+- `X-Client-Ip` cru seulement si `X-BFF-Auth` = secret (timing-safe).
+- Front : `CENTRAL_API_BFF_SECRET` (jamais `NEXT_PUBLIC_*`) + `X-Client-Ip` via `x-real-ip` sinon **dernier** hop `X-Forwarded-For`.
+- Sans secret côté front : n’envoie rien (compat).
+
+#### Ordre de déploiement (obligatoire)
+1. Déployer l’API avec `PUBLIC_RATE_LIMIT=trusted` et `BFF_SHARED_SECRET` défini (≥ 32).
+2. Ajouter le **même** secret dans le `.env` de chaque site client (`CENTRAL_API_BFF_SECRET`) puis reconstruire les conteneurs front.
+3. Seulement ensuite : passer l’API en `PUBLIC_RATE_LIMIT=strict`.
+
+**Nginx (à vérifier toi-même sur le serveur) :** transmettre `X-Real-IP $remote_addr` vers le BFF Next (et `trust proxy` déjà côté API). Ne pas faire confiance au premier élément de `X-Forwarded-For` côté BFF.
+
+### P3 — `REFUND_UNCERTAIN` conserve `clientRequestId` ✅ (front)
+- `shouldPreserveClientRequestId` : `STRIPE_UNCERTAIN` | `STRIPE_UNREACHABLE` | `REFUND_UNCERTAIN`.
+- Message FR dans `proRefundsClient.ts`.
+
+### P4 — `verify:stored-settings` ✅ (API, lecture seule)
+- Script `npm run verify:stored-settings` — slug / chemin / règle uniquement.
+- **Résultat local (31/10) :** 3 fichiers OK (`tenant-marketing-defaults.json`, `clients/default.json`, `clients/client-demo.json`) ; base locale injoignable / sans settings.
+- Si une config prod échoue : **migration douce** recommandée — valider `settings.pricing` seulement lorsque le bloc pricing est présent/modifié dans le PUT, ou backfill one-shot des grilles ≤ 0, plutôt que de bloquer tout l’enregistrement des réglages marketing.
+
+### Matrice de transitions (proposition — à valider, non implémentée)
+
+Statuts modèle : `new`, `pending`, `accepted`, `refused`, `processed`, `archived`, `scheduled`, `completed`, `cancelled`, `expired`, `cancellation_requested`.
+
+| Depuis → | Autorisé (PATCH /status) | Interdit (utiliser autre flux) |
+| --- | --- | --- |
+| `new` / `pending` | `accepted`, `refused`, `processed`, `archived`, `expired` | `cancelled`, `cancellation_requested` → POST cancel / jeton client |
+| `accepted` / `scheduled` | `processed`, `completed`, `archived`, `refused` | idem annulation |
+| `cancellation_requested` | (aucune via PATCH) | resolve via POST cancellation-request/resolve |
+| `completed` / `refused` / `cancelled` / `expired` / `archived` | `archived` seulement (si pas déjà) | retour vers `new`/`pending`/`accepted` |
+| `processed` | `archived`, `completed`, `scheduled` | annulation via PATCH |
+
+---
+
+## Variables d’environnement (noms seulement)
+
+| Où | Variable |
+| --- | --- |
+| API | `BFF_SHARED_SECRET`, `PUBLIC_RATE_LIMIT`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `NODE_ENV` |
+| Front (serveur) | `CENTRAL_API_BFF_SECRET`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_TENANT_ID` |
+
+---
+
+*Fin du rapport — audit initial sans code ; §7–8 = correctifs API/front ultérieurs.*
