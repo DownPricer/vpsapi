@@ -125,10 +125,26 @@ export async function syncLeadOccupation(tx: Prisma.TransactionClient, leadId: s
       vehicleId: true,
       scheduledStart: true,
       scheduledEnd: true,
-      vehicle: { select: { name: true } },
+      vehicle: { select: { name: true, archivedAt: true } },
     },
   });
   if (!lead) return;
+
+  // Même verrou que archiveVehicle : une acceptation ne peut pas créer d'occupation sur un véhicule archivé.
+  if (lead.vehicleId && isBlockingStatus(lead.status)) {
+    await tx.$queryRaw`SELECT id FROM "Vehicle" WHERE id = ${lead.vehicleId} AND "tenantId" = ${lead.tenantId} FOR UPDATE`;
+    const locked = await tx.vehicle.findFirst({
+      where: { id: lead.vehicleId, tenantId: lead.tenantId },
+      select: { archivedAt: true, name: true },
+    });
+    if (!locked || locked.archivedAt) {
+      throw new VehicleUnavailableError(
+        locked?.name ?? lead.vehicle?.name ?? null,
+        [],
+        "Ce véhicule n'est plus disponible (archivé)."
+      );
+    }
+  }
 
   const wanted =
     lead.vehicleId && isBlockingStatus(lead.status) ? leadOccupationDays(lead) : ([] as string[]);
@@ -221,6 +237,7 @@ export async function createVehicleBlock(input: {
     throw Object.assign(new Error("Période trop longue (366 jours maximum)."), { status: 400, code: "VALIDATION_ERROR" });
   }
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Vehicle" WHERE id = ${input.vehicleId} AND "tenantId" = ${input.tenantId} FOR UPDATE`;
     const vehicle = await tx.vehicle.findFirst({
       where: { id: input.vehicleId, tenantId: input.tenantId, archivedAt: null },
       select: { id: true, name: true },

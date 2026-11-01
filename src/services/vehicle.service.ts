@@ -310,20 +310,36 @@ export async function setFeaturedVehicle(tenantId: string, id: string) {
 
 /** Archivage (jamais de suppression physique : l'historique des devis/réservations garde sa référence). */
 export async function archiveVehicle(tenantId: string, id: string) {
-  const v = await prisma.vehicle.findFirst({ where: { id, tenantId } });
-  if (!v) throw new VehicleError("Véhicule introuvable.", "NOT_FOUND", 404);
   const today = DateTime.now().setZone(tenantTimezone(tenantId)).toISODate()!;
-  const upcoming = await prisma.vehicleDayOccupation.count({
-    where: { vehicleId: id, leadId: { not: null }, day: { gte: dayKeyToDate(today) } },
-  });
-  if (upcoming > 0) {
-    throw new VehicleError(
-      `Ce véhicule a ${upcoming} jour(s) de réservation à venir : changez le véhicule de ces réservations avant de l'archiver (ou désactivez-le simplement).`,
-      "HAS_UPCOMING_BOOKINGS",
-      409
-    );
-  }
+  // Comptage + archivage dans la même transaction, avec verrou ligne véhicule (anti course KO-m7).
+  // Choix simple KO-m8 : refuser s'il reste des blocs d'indisponibilité futurs (pas de suppression implicite).
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Vehicle" WHERE id = ${id} AND "tenantId" = ${tenantId} FOR UPDATE`;
+    const v = await tx.vehicle.findFirst({ where: { id, tenantId } });
+    if (!v) throw new VehicleError("Véhicule introuvable.", "NOT_FOUND", 404);
+
+    const upcoming = await tx.vehicleDayOccupation.count({
+      where: { vehicleId: id, leadId: { not: null }, day: { gte: dayKeyToDate(today) } },
+    });
+    if (upcoming > 0) {
+      throw new VehicleError(
+        `Ce véhicule a ${upcoming} jour(s) de réservation à venir : changez le véhicule de ces réservations avant de l'archiver (ou désactivez-le simplement).`,
+        "HAS_UPCOMING_BOOKINGS",
+        409
+      );
+    }
+
+    const upcomingBlocks = await tx.vehicleBlock.count({
+      where: { vehicleId: id, endDay: { gte: dayKeyToDate(today) } },
+    });
+    if (upcomingBlocks > 0) {
+      throw new VehicleError(
+        `Ce véhicule a ${upcomingBlocks} bloc(s) d'indisponibilité à venir : supprimez-les dans le calendrier avant d'archiver.`,
+        "HAS_UPCOMING_BLOCKS",
+        409
+      );
+    }
+
     await tx.vehicle.update({ where: { id }, data: { archivedAt: new Date(), active: false, featured: false } });
     await ensureFeaturedExists(tx, tenantId);
     return toProVehicle(await tx.vehicle.findUniqueOrThrow({ where: { id }, include }));

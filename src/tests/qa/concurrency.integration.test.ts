@@ -11,7 +11,8 @@ const TEST_DB = process.env.TEST_DATABASE_URL;
 if (TEST_DB) {
   assertLocalTestDb(TEST_DB);
   process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "sk_test_dummy_not_used_for_network";
-  process.env.STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "whsec_test_qa_concurrency";
+  // Forcer un secret de test stable (écrase le placeholder .env.test).
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_test_qa_concurrency";
 }
 
 const suite = TEST_DB ? describe : describe.skip;
@@ -180,42 +181,30 @@ suite("QA concurrence (PostgreSQL jetable)", () => {
 
   // ---------------------------------------------------------------------------
   describe("KO-m7 archive vs acceptation", () => {
-    /**
-     * Bug KO-m7 : archiveVehicle compte les occupations puis archive hors verrou —
-     * une acceptation concurrente peut créer une occupation sur un véhicule déjà archivé.
-     * Correctif proposé : même transaction / SELECT FOR UPDATE sur le véhicule.
-     */
-    it(
-      "course check/archive : aucune occupation ne doit rester sur un véhicule archivé",
-      { todo: true },
-      async () => {
-        let bugSeen = false;
-        for (let round = 0; round < 25; round++) {
-          const v = await mkVehicle(TA, `KO-m7 ${round}`);
-          const lead = await seedLead(TA, v.id, `2028-06-${String((round % 28) + 1).padStart(2, "0")}T10:00:00Z`);
-          const results = await Promise.allSettled([accept(TA, lead.id), V.archiveVehicle(TA, v.id)]);
-          const row = await prisma.vehicle.findUniqueOrThrow({ where: { id: v.id } });
-          const occ = await prisma.vehicleDayOccupation.count({
-            where: { vehicleId: v.id, leadId: { not: null } },
+    it("course check/archive : aucune occupation ne doit rester sur un véhicule archivé", async () => {
+      for (let round = 0; round < 25; round++) {
+        const v = await mkVehicle(TA, `KO-m7 ${round}`);
+        const lead = await seedLead(TA, v.id, `2028-06-${String((round % 28) + 1).padStart(2, "0")}T10:00:00Z`);
+        await Promise.allSettled([accept(TA, lead.id), V.archiveVehicle(TA, v.id)]);
+        const row = await prisma.vehicle.findUniqueOrThrow({ where: { id: v.id } });
+        const occ = await prisma.vehicleDayOccupation.count({
+          where: { vehicleId: v.id, leadId: { not: null } },
+        });
+        assert.ok(
+          !(row.archivedAt && occ > 0),
+          `round ${round}: occupation sur véhicule archivé (KO-m7)`
+        );
+        // Nettoyage si accept a gagné sans archive
+        if (!row.archivedAt) {
+          await prisma.leadRequest.update({
+            where: { id: lead.id },
+            data: { status: "cancelled", cancelledAt: new Date() },
           });
-          if (row.archivedAt && occ > 0) {
-            bugSeen = true;
-            break;
-          }
-          // Nettoyage si accept a gagné sans archive
-          if (!row.archivedAt && results[0].status === "fulfilled") {
-            await prisma.leadRequest.update({
-              where: { id: lead.id },
-              data: { status: "cancelled", cancelledAt: new Date() },
-            });
-            await A.syncLeadOccupation(prisma, lead.id);
-            await V.archiveVehicle(TA, v.id).catch(() => undefined);
-          }
+          await A.syncLeadOccupation(prisma, lead.id);
+          await V.archiveVehicle(TA, v.id).catch(() => undefined);
         }
-        // Invariant attendu (échoue tant que KO-m7 n'est pas corrigé si la course est hit) :
-        assert.equal(bugSeen, false, "occupation sur véhicule archivé (KO-m7)");
       }
-    );
+    });
   });
 
   // ---------------------------------------------------------------------------
