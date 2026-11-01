@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import crypto from "crypto";
 import { z } from "zod";
 import { loadEnv } from "../config/env";
-import { AuthService } from "../services/auth.service";
+import { AuthLoginError, AuthService } from "../services/auth.service";
 import { trackFromRequest } from "../platform/telemetry.service";
 
 const env = loadEnv();
@@ -86,20 +86,27 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
     });
     res.json({ success: true, data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
+    const failureReason = e instanceof AuthLoginError ? e.reason : "unknown";
     const message = e instanceof Error ? e.message : "Erreur login";
     const emailHash = hashEmailForLogs(parsed.data.email);
     console.warn("[auth:pro] login refused", {
       tenantId: req.tenantId,
+      tenantResolved: req.tenantId,
       tenantResolution: req.tenantResolution?.source,
       origin: req.tenantResolution?.origin,
       observedDomain: req.tenantResolution?.observedDomain,
       matchedDomain: req.tenantResolution?.matchedDomain,
       domainStatus: req.tenantResolution?.domainStatus,
       emailHash,
-      reason: message.slice(0, 120),
+      failureReason,
+      userFound: failureReason !== "user_not_found",
+      passwordOk: failureReason === "password_mismatch" ? false : failureReason === "user_not_found" ? null : true,
+      userActive: failureReason === "user_inactive" ? false : failureReason === "user_not_found" ? null : true,
     });
     void trackFromRequest({
       tenantId: req.tenantId,
+      observedDomain: req.tenantResolution?.observedDomain ?? null,
+      origin: req.tenantResolution?.origin ?? null,
       type: "pro_login_failed",
       category: "pro_auth",
       reqIp: req.ip,
@@ -107,7 +114,17 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
       userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
       path: "/api/auth/login",
       referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
-      metadata: { emailHash, emailMasked: maskEmail(parsed.data.email), reason: message.slice(0, 200) },
+      metadata: {
+        emailHash,
+        emailMasked: maskEmail(parsed.data.email),
+        failureReason,
+        tenantResolved: req.tenantId,
+        domainResolved: req.tenantResolution?.matchedDomain ?? req.tenantResolution?.observedDomain ?? null,
+        tenantResolution: req.tenantResolution?.source ?? null,
+        userFound: failureReason !== "user_not_found",
+        passwordOk: failureReason === "password_mismatch" ? false : failureReason === "user_not_found" ? null : true,
+        userActive: failureReason === "user_inactive" ? false : failureReason === "user_not_found" ? null : true,
+      },
     });
     res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message } });
   }

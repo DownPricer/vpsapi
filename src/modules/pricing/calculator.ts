@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { getDistancesWithFallback, type DistanceUsageContext } from "../distance/distanceMatrix";
+import { trackPlatformEvent } from "../../platform/telemetry.service";
 import { calculerCreneaux, isFerie } from "./creneaux";
 import { emptyBasis, type VehicleSurchargeBasis } from "./vehicleSurcharge";
 import type { TenantPricingEngineConfig } from "./engineTypes";
@@ -272,7 +273,23 @@ export async function calculerDistances(
   }
 
   const list = Array.from(addresses);
-  if (list.length === 0) return dist;
+  if (list.length === 0) {
+    void trackPlatformEvent({
+      tenantId: usageContext?.tenantId ?? null,
+      observedDomain: usageContext?.observedDomain ?? null,
+      origin: usageContext?.origin ?? null,
+      type: "api_usage_distance_matrix",
+      category: "api_usage",
+      path: usageContext?.path ?? "/api/calculer-tarif",
+      metadata: {
+        provider: "distancematrix.ai",
+        skipped: true,
+        reason: "no_addresses",
+        success: false,
+      },
+    });
+    return dist;
+  }
 
   const dm = await getDistancesWithFallback(apiKey, list, list, usageContext);
   const get = (o: string, d: string) =>

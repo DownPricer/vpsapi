@@ -12,6 +12,21 @@ export type DistanceUsageContext = {
   path?: string | null;
 };
 
+async function emitDistanceUsageEvent(
+  usageContext: DistanceUsageContext | undefined,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  await trackPlatformEvent({
+    tenantId: usageContext?.tenantId ?? null,
+    observedDomain: usageContext?.observedDomain ?? null,
+    origin: usageContext?.origin ?? null,
+    type: "api_usage_distance_matrix",
+    category: "api_usage",
+    path: usageContext?.path ?? "/api/calculer-tarif",
+    metadata,
+  });
+}
+
 export async function getDistancesBatch(
   apiKey: string,
   origins: string[],
@@ -41,23 +56,15 @@ export async function getDistancesBatch(
     if (data.status !== "OK") {
       throw new Error(`DistanceMatrix: ${data.error_message || data.status}`);
     }
-    void trackPlatformEvent({
-      tenantId: usageContext?.tenantId ?? null,
-      observedDomain: usageContext?.observedDomain ?? null,
-      origin: usageContext?.origin ?? null,
-      type: "api_usage_distance_matrix",
-      category: "api_usage",
-      path: usageContext?.path ?? "/api/calculer-tarif",
-      metadata: {
-        provider: "distancematrix.ai",
-        endpoint: "maps/api/distancematrix/json",
-        success: true,
-        status: data.status,
-        durationMs: Date.now() - startedAt,
-        originCount: origins.length,
-        destinationCount: destinations.length,
-        billableUnit: origins.length * destinations.length,
-      },
+    await emitDistanceUsageEvent(usageContext, {
+      provider: "distancematrix.ai",
+      endpoint: "maps/api/distancematrix/json",
+      success: true,
+      status: data.status,
+      durationMs: Date.now() - startedAt,
+      originCount: origins.length,
+      destinationCount: destinations.length,
+      billableUnit: origins.length * destinations.length,
     });
   const out: Record<string, DistanceResult> = {};
   if (data.rows) {
@@ -79,24 +86,17 @@ export async function getDistancesBatch(
   }
   return out;
   } catch (e) {
-    void trackPlatformEvent({
-      tenantId: usageContext?.tenantId ?? null,
-      observedDomain: usageContext?.observedDomain ?? null,
-      origin: usageContext?.origin ?? null,
-      type: "api_usage_distance_matrix",
-      category: "api_usage",
-      path: usageContext?.path ?? "/api/calculer-tarif",
-      metadata: {
-        provider: "distancematrix.ai",
-        endpoint: "maps/api/distancematrix/json",
-        success: false,
-        status: statusForEvent,
-        error: e instanceof Error ? e.message.slice(0, 160) : "DistanceMatrix error",
-        durationMs: Date.now() - startedAt,
-        originCount: origins.length,
-        destinationCount: destinations.length,
-        billableUnit: origins.length * destinations.length,
-      },
+    await emitDistanceUsageEvent(usageContext, {
+      provider: "distancematrix.ai",
+      endpoint: "maps/api/distancematrix/json",
+      success: false,
+      status: statusForEvent,
+      error: e instanceof Error ? e.message.slice(0, 160) : "DistanceMatrix error",
+      durationMs: Date.now() - startedAt,
+      originCount: origins.length,
+      destinationCount: destinations.length,
+      billableUnit: origins.length * destinations.length,
+      fallbackUsed: true,
     });
     throw e;
   }

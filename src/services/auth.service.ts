@@ -19,6 +19,16 @@ function sanitizeUser(user: OperatorUser) {
   };
 }
 
+export class AuthLoginError extends Error {
+  readonly reason: "user_not_found" | "password_mismatch" | "user_inactive";
+
+  constructor(reason: "user_not_found" | "password_mismatch" | "user_inactive", message = "Identifiants invalides") {
+    super(message);
+    this.name = "AuthLoginError";
+    this.reason = reason;
+  }
+}
+
 export class AuthService {
   async login(params: {
     tenantId: string;
@@ -29,12 +39,13 @@ export class AuthService {
   }) {
     const email = params.email.trim().toLowerCase();
     const user = await prisma.operatorUser.findFirst({
-      where: { tenantId: params.tenantId, email, active: true },
+      where: { tenantId: params.tenantId, email },
     });
-    if (!user) throw new Error("Identifiants invalides");
+    if (!user) throw new AuthLoginError("user_not_found");
+    if (!user.active) throw new AuthLoginError("user_inactive");
 
     const ok = await bcrypt.compare(params.password, user.passwordHash);
-    if (!ok) throw new Error("Identifiants invalides");
+    if (!ok) throw new AuthLoginError("password_mismatch");
 
     const session = await prisma.authSession.create({
       data: {

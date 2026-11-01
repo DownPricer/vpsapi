@@ -23,6 +23,8 @@
     "verify:pricing-config": "tsx src/scripts/verifyPricingConfig.ts",
     "audit:utf8": "tsx src/scripts/auditUtf8.ts",
     "tenant:create": "tsx src/scripts/createTenant.ts",
+    "tenant:repair-default-content": "tsx src/scripts/repairDefaultTenantContent.ts",
+    "platform:ensure-operator": "tsx src/scripts/ensureDefaultOperator.ts",
     "platform:fix-default-domain": "tsx src/scripts/fixDefaultDomain.ts",
     "fleet:convert-base64-photos": "tsx src/scripts/convertBase64VehiclePhotos.ts"
   },
