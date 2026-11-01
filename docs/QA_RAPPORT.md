@@ -357,4 +357,107 @@ Statuts modèle : `new`, `pending`, `accepted`, `refused`, `processed`, `archive
 
 ---
 
-*Fin du rapport — audit initial sans code ; §7–8 = correctifs API/front ultérieurs.*
+## 9. Passe 2 (01/11/2026) — QA adversarial, worktrees `fix/qa-securite` + `fix/qa-front`
+
+**Environnement mis en place :** Postgres 18 embarqué (`embedded-postgres`) UTF-8 sur `127.0.0.1:5433` / base `vtc_qa_test` (Docker indisponible ; winget PostgreSQL bloqué). Migrations `prisma migrate deploy` OK (10). Seed OK. Mailpit `127.0.0.1:1025` / UI `:8025`. SMTP OVH **jamais** utilisé. Distance Matrix stubbée. Stripe : placeholder `sk_test_dummy…` seulement — **clé `sk_test_` réelle et secret webhook de test demandés** (non écrits dans Git).
+
+**Règle respectée :** aucun code applicatif modifié ; ajouts sous `vtc-core-api-qa/src/tests/qa/` + `vtc-template-front/vtc76-qa/e2e/` + `.env.test` gitignoré.
+
+### 9.1 Tableau par étape
+
+| Étape | Résultat | Preuve |
+| --- | --- | --- |
+| 0 Env + `test:integration` | **OK** | `npm run test:integration` → **60/60 pass** (~17,6 s) sur `127.0.0.1:5433` |
+| 0 Mailpit | **OK** | v1.32.0 installé (winget) ; SMTP local capturant |
+| 1 Fériés 2027-2028 | **KO (bug confirmé)** | `src/tests/qa/holidays2027-2028.test.ts` **43/43** : `isFerie` faux ; maj/taux férié absents sauf si date forcée dans `publicHolidays` |
+| 2 Double booking 20× | **OK** | `concurrency.integration.test.ts` — contrainte UNIQUE véhicule/jour |
+| 2 Blocs indispo concurrence | **OK** | même suite |
+| 2 Course archive véhicule (KO-m7) | **KO confirmé** | test `{ todo }` : occupation possible sur véhicule déjà archivé |
+| 2 Remboursements parallèles | **OK** | même `clientRequestId` → 1 ligne ; ids différents après full → refus ; somme partiels ≤ payé |
+| 2 Webhook Stripe (replay / ordre / sig / autre compte) | **OK** | 10× parallèle + faux secret + account mismatch |
+| 2 Isolation 2 tenants | **OK** | IDs A via contexte B → null / NOT_FOUND / PAYMENT_NOT_FOUND |
+| 2 DST minuit Europe/Paris | **OK** | `localDaysBetween` + occupations ; bornes UTC corrigées dans le test |
+| 3 `POST /api/debug/smtp-test` | **OK (partiel)** | `security.http.test.ts` : behavior dev vs prod documenté ; envois Mailpit only |
+| 3 Rate-limit HTTP + BFF | **OK** | modes `off`/`trusted`/`strict`, spoof IP, secret absent/faux/valide |
+| 3 JWT / refresh reuse | **OK** | `alg:none`, sig modifiée, expiré, autre tenant, reuse refresh |
+| 3 Proto pollution + sanitize public | **OK** | PUT settings + parcours récursif clés secrètes |
+| 3 Uploads | **OK** | faux contenu / trop gros refusés (HTTP) |
+| 3 Front `/api/contact` mass | **KO (majeur)** | 25 envois Mailpit en ~333 ms (~13 ms/envoi), **aucune limite** ; erreur SMTP brute possible côté route |
+| 4 Propriétés + golden | **OK / bug monotonie** | fast-check : total>0, AR≤2×AS, véhicule non négatif, déterminisme **OK** ; monotonie km **KO** (todo) ; golden **61 cas** vert |
+| 5 Client `tenant:create` | **OK partiel** | login, settings, calcul, devis→accept **OK** ; paiement Stripe **todo** (pas de `sk_test_` réelle) ; placeholders marketing encore présents (« exemple », « À compléter ») malgré compteur script = 0 |
+| 6 E-mails extrêmes Mailpit | **OK / Stripe todo** | templates extrêmes capturés ; pas de `undefined`/`NaN`/`[object Object]` sur le corpus testé |
+| 7 Pannes | **KO majeurs documentés** | DM fail → **200 + 0 km + plancher 30 €** (todo+repro) ; SMTP fail → lead+`emailError` OK ; `/api/health` **ne sonde pas** Postgres |
+| 7 Charge | **OK** | autocannon : calculer-tarif **p95≈21 ms** (~472 rps) ; login **p95≈6 ms** ; settings **p95≈16 ms** ; heap Δ≈**84 Mo** ; 10k leads : list ~**29 ms**, dashboard ~**161 ms** |
+| 8 Playwright E2E | **Non testable** | specs `e2e/qa-pass2.spec.ts` + config prêts ; front `next dev` + `sk_test_` + Playwright browsers non allumés dans cette passe |
+
+### 9.2 Bugs classés (nouveaux ou reconfirmés en passe 2)
+
+#### Bloquant la vente
+
+1. **Fériés absents dès 2027** — `default.engine.json` / `publicHolidays` figé 2025-2026. Un 1er mai / 14 juillet / Pâques 2027-2028 n’applique ni `pctFerie` ni taux MAD `weekendOrHoliday`.  
+   - **Repro :** `npx tsx --test src/tests/qa/holidays2027-2028.test.ts`  
+   - **Correctif :** générer les fériés FR (fixes + mobiles Meeus) pour N années glissantes à la résolution du moteur / au `tenant:create`, plus liste hardcodée.
+
+2. **Distance Matrix en panne → faux tarif** — stub fail → HTTP 200, distances 0, tarif = plancher zone (ex. 30 €).  
+   - **Cause :** `getDistancesWithFallback` avale l’erreur et renvoie `{ km: 0, duree: 0 }`.  
+   - **Repro :** `failuresAndLoad.test.ts` « repro figée DM fail »  
+   - **Correctif :** propager l’erreur DM (4xx/5xx) ; ne jamais facturer sur ce fallback silencieux.
+
+#### Majeur
+
+3. **Non-monotonie km** — AS 199 km = **403 €** > AS 201 km = **365 €** (paliers €/km décroissants + ceil).  
+   - **Correctif :** `tarif(km) = max(grille(km), tarif(km-ε))` ou lissage des paliers.
+
+4. **`/api/contact` (front) sans rate-limit** — 25 mails SMTP en 0,3 s via lib équivalente ; surface spam / coût SMTP.  
+   - **Correctif :** limiteur IP+e-mail (comme login API) + ne jamais renvoyer le message d’erreur SMTP brut au client.
+
+5. **KO-m7 course archive véhicule** — confirmé sous charge parallèle : occupation possible après `archivedAt`.  
+   - **Correctif :** archive + comptage occupations en **une** transaction `SELECT FOR UPDATE`.
+
+6. **Placeholders marketing après `tenant:create`** — `placeholders:0` au script (regex `Adresse à compléter|Exemple` trop étroite) alors que restent notamment `legalRepresentative` / `vtcLicenseNumber` = « À compléter », plus d’autres « exemple » dans le JSON. Visibles côté public si non édités.  
+   - **Correctif :** élargir `countPlaceholders` + checklist `/pro/site` obligatoire avant go-live.
+
+#### Mineur
+
+7. **`/api/health` sans sonde DB** — process up même si Postgres down.  
+8. **Compteur placeholders `tenant:create` sous-estime** les textes démo.  
+9. **Winget PostgreSQL / stabilité embedded PG Windows** — infra locale fragile (restarts) ; documenter Postgres natif UTF-8 pour CI.  
+10. **`POST /api/debug/smtp-test` sans auth en `development`** — 404 en prod OK ; en local destinataire libre (Mailpit only en QA). Hygiène : restreindre aux destinataires locaux / exiger un secret même en dev.
+
+### 9.3 Enfin testable (était « non testable » passe 1)
+
+- `test:integration` complet (60)  
+- Double booking / blocs / remboursements / webhooks / isolation / DST  
+- Rate-limit + BFF + JWT hostiles en HTTP réel  
+- Golden master 61 cas + properties  
+- `tenant:create` parcours login→accept  
+- Mailpit + contact mass  
+- Charge autocannon + 10k leads  
+- Course archive KO-m7 reproduite  
+
+### 9.4 Toujours non testable
+
+| Zone | Pourquoi |
+| --- | --- |
+| Paiement Stripe Checkout carte `4242…` + webhook signature live | Pas de `sk_test_` / `whsec_test_` fournis (demander) |
+| Playwright parcours complet (client+chauffeur, axe, mobile) | Front non démarré + Stripe manquant |
+| Distance Matrix **live** payante | Volontairement stub (coût) |
+| SMTP OVH réel | Interdit ; Mailpit only |
+
+### 9.5 Les 5 problèmes à corriger en premier (passe 2)
+
+1. **Calcul programmatique des fériés FR** (plus de liste 2025-2026 only).  
+2. **Refuser le calcul tarifaire si Distance Matrix échoue** (plus de 0 km silencieux).  
+3. **Monotonie des grilles km** (plus long ≥ aussi cher).  
+4. **Rate-limit + masquage d’erreur sur `/api/contact`** (front).  
+5. **Archive véhicule atomique** (KO-m7) + fournir **`sk_test_` + webhook secret** pour boucler Stripe E2E / Playwright.
+
+### 9.6 Artefacts tests ajoutés
+
+- API : `src/tests/qa/holidays2027-2028.test.ts`, `pricing.properties.test.ts`, `fixtures/pricing-golden.json`, `concurrency.integration.test.ts`, `security.http.test.ts`, `tenantReadyToSell.test.ts`, `emailsExtreme.test.ts`, `failuresAndLoad.test.ts`, helpers `qaEnv.ts` / `startQaPg.ts`  
+- Front : `e2e/qa-pass2.spec.ts`, `e2e/contact-mass-mailpit.test.ts`, `playwright.config.ts`  
+- Infra locale : `tmp/start-embedded-pg.mjs` (non suivi), `.env.test` (gitignoré)
+
+---
+
+*Fin du rapport — §9 = Passe 2 (tests only, bugs documentés, pas de correctif applicatif).*

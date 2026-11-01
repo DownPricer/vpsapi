@@ -10,3 +10,7 @@ tmp/
 
 # Photos de véhicules uploadées (UPLOADS_DIR par défaut)
 /uploads/
+
+.env.test
+.env.*.local
+
