@@ -460,4 +460,95 @@ Statuts modèle : `new`, `pending`, `accepted`, `refused`, `processed`, `archive
 
 ---
 
-*Fin du rapport — §9 = Passe 2 (tests only, bugs documentés, pas de correctif applicatif).*
+## 10. Passe 3 (01/11/2026) — correctifs bugs confirmés §9
+
+**Branches :** API `fix/qa-passe3` (depuis `feat/admin-cockpit-redesign`) · Front `fix/qa-front-passe3` (depuis `main`)  
+**Worktrees :** `vtc-core-api-qa` · `vtc-template-front/vtc76-qa`  
+**Règle :** un commit par lot ; aucun push ; `vtc-core-api` principal non touché.
+
+### 10.0 Mesures finales
+
+| Contrôle | Résultat |
+| --- | --- |
+| `npx tsc --noEmit` (API) | **OK** (exit 0) |
+| `npx tsc --noEmit` (front) | **OK** (exit 0) |
+| `npm test` (API unitaires) | **197/197** pass |
+| `npm run test:integration` | **60/60** pass |
+| Golden master | 61 cas historiques **identiques** + **10** cas fériés 2027-2028 (total 71) |
+
+### 10.1 LOT 1 — Jours fériés programmatiques
+
+| | |
+| --- | --- |
+| **Commit** | `2457ae6` — *Calcule les 11 jours fériés français (Meeus) et unifie isFerie avec la liste tenant.* |
+| **Avant** | `isFerie` = inclusion seule dans `publicHolidays` figé 2025-2026 → maj fériée absente dès 2027 |
+| **Après** | Module `frenchHolidays.ts` (Meeus/Jones/Butcher) ; `isFerie` = **calcul ∪ liste tenant** ; fuseau Europe/Paris |
+| **Tests** | `frenchHolidays.test.ts` (table 2025–2035, Pâques 2027=28/03, 2028=16/04, 2029=01/04) ; `holidays2027-2028.test.ts` verts (plus en mode bug) ; golden +10 cas |
+| **tenant:create** | N’écrit toujours pas de liste fériée (réglages marketing sans `publicHolidays`) — OK |
+| **Ouvert** | Listes figées 2025-2026 dans `default.engine.json` conservées comme extras tenant (dates mobiles historiquement imprécises restent valides via union) |
+
+### 10.2 LOT 2 — Distance Matrix : ne jamais facturer une distance inventée
+
+| | |
+| --- | --- |
+| **Commit API** | `0df5329` — *Refuse de facturer sur une distance inventée (propager Distance Matrix).* |
+| **Commit front** | `150e7bc` — *Affiche l'erreur de calcul tarifaire sans prix de repli.* |
+| **Avant** | `getDistancesWithFallback` avalait l’erreur → `{0,0}` → HTTP 200 + plancher (ex. 30 €) |
+| **Après** | `DistanceUnavailableError` (`ADDRESS_NOT_FOUND`→422, `PROVIDER_ERROR`→503) ; messages FR non techniques ; élément non-OK lève (sauf origine=destination → 0 km légitime) ; PlatformEvent conservé |
+| **Tests** | `distanceMatrix.test.ts` ; `failuresAndLoad` (fail / not_found / network / 500 / quota / devis sans lead) |
+| **Devis / réservation (comportement actuel + proposition)** | **Actuel (conservé) :** `runPricingPipeline` échoue **avant** `createLead` → aucun devis/réservation avec faux prix ; réponse 422/503. **Proposition (en attente de décision métier) :** enregistrer quand même une demande « tarif à confirmer » (sans montant payable / sans Checkout) pour ne pas perdre le lead client — **non implémenté**, à trancher. |
+| **Ouvert** | Décision parcours client « tarif à confirmer » |
+
+### 10.3 LOT 3 — Front `/api/contact`
+
+| | |
+| --- | --- |
+| **Commit** | `f5c6eef` — *Limite et sécurise POST /api/contact (IP, e-mail, validation, SMTP générique).* |
+| **Avant** | Aucune limite ; erreur SMTP brute possible côté client |
+| **Après** | 5/15 min/IP + 3/15 min/e-mail (`bffClientIp`) ; 429 + `Retry-After` ; validation/bornage + strip `\r\n` ; SMTP logué serveur, message générique client ; purge des entrées expirées |
+| **Tests** | `contactRateLimit.test.ts` + validation |
+| **Ouvert** | Rejouer `contact-mass-mailpit` via HTTP Next une fois le front démarré |
+
+### 10.4 LOT 4 — Archive véhicule atomique (KO-m7) + blocs (KO-m8)
+
+| | |
+| --- | --- |
+| **Commit** | `93f57bc` — *Archive véhicule atomique (FOR UPDATE) et refuse les blocs futurs.* |
+| **Avant** | Comptage hors transaction → occupation possible après `archivedAt` |
+| **Après** | `archiveVehicle` : `SELECT … FOR UPDATE` + comptage + archive dans **une** transaction ; `syncLeadOccupation` / `createVehicleBlock` prennent le même verrou et refusent si archivé |
+| **KO-m8 (choix)** | **Refus** d’archiver s’il reste des blocs d’indisponibilité futurs (`HAS_UPCOMING_BLOCKS`) — pas de suppression implicite |
+| **Tests** | `concurrency.integration.test.ts` KO-m7 : `{ todo }` → test normal **vert** (25 rounds) |
+
+### 10.5 LOT 5 — Résidus limiteurs
+
+| | |
+| --- | --- |
+| **Commit** | `321107a` — *Durcit les limiteurs : échecs login e-mail, purge, strict exige BFF.* |
+| **Avant** | Plafond e-mail comptait aussi les succès ; pas de garde `strict` sans secret ; purge opportuniste seulement |
+| **Après** | `PUBLIC_RATE_LIMIT=strict` sans `BFF_SHARED_SECRET` → **refus de démarrer** ; compteur e-mail = **échecs seulement** + reset au succès ; `purgeExpiredRateLimitEntries` + timer 60 s |
+| **Tests** | `rateLimitPurge.test.ts`, `publicRateLimitStrictEnv.test.ts`, `loginRateLimit.test.ts` aligné |
+
+### 10.6 LOT 6 — Santé, debug SMTP, placeholders
+
+| | |
+| --- | --- |
+| **Commit** | `66ff803` — *Ajoute /api/health/ready, conditionne smtp-test et élargit les placeholders.* |
+| **Après** | `GET /api/health/ready` → `SELECT 1` → 200/503 (sans détail) ; `/api/health` **inchangé** ; `POST /api/debug/smtp-test` monté **seulement** si `ENABLE_DEBUG_SMTP=1` **et** `NODE_ENV=development` (sinon route absente → 404) ; `tenant:create` détecte « À compléter », Exemple/exemple/example, `@example.*`, liste les champs + consigne `/pro/site` |
+| **Ouvert** | Activer `ENABLE_DEBUG_SMTP=1` uniquement en local ; ne jamais le poser en prod |
+
+### 10.7 Hors périmètre (toujours ouvert)
+
+- Non-monotonie des tarifs au km (décision métier)  
+- RBAC admin/agent  
+- Stripe E2E (`sk_test_` réelle) / Playwright  
+- Proposition devis « tarif à confirmer » (LOT 2)
+
+### 10.8 Commits de socle
+
+| Commit | Message |
+| --- | --- |
+| `f6855e5` | Ajoute l'outillage et les tests QA de la passe 2 (fixtures helpers suites). |
+
+---
+
+*Fin du rapport — §10 = Passe 3 (correctifs lots 1–6).*
