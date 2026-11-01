@@ -1,0 +1,3813 @@
+{
+  "generatedAt": "2026-11-01T14:54:23.384Z",
+  "engine": "default.engine.json",
+  "note": "Filet de sécurité pré-déploiement — échoue si un prix change.",
+  "cases": [
+    {
+      "id": "as-km-20",
+      "meta": {
+        "scenario": "AS",
+        "km": 20
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 20,
+            "duree": 1200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 20,
+            "duree": 1200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 60,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-km-50",
+      "meta": {
+        "scenario": "AS",
+        "km": 50
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 50,
+            "duree": 3000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 50,
+            "duree": 3000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 140,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-km-80",
+      "meta": {
+        "scenario": "AS",
+        "km": 80
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 182,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-km-120",
+      "meta": {
+        "scenario": "AS",
+        "km": 120
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 245,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-km-200",
+      "meta": {
+        "scenario": "AS",
+        "km": 200
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 405,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-km-350",
+      "meta": {
+        "scenario": "AS",
+        "km": 350
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 350,
+            "duree": 21000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 350,
+            "duree": 21000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 631,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-nuit",
+      "meta": {
+        "scenario": "AS",
+        "tag": "nuit"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "23:30"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 486,
+      "expectedMajTotal": 77
+    },
+    {
+      "id": "as-soir",
+      "meta": {
+        "scenario": "AS",
+        "tag": "soir"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "20:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 445,
+      "expectedMajTotal": 38.5
+    },
+    {
+      "id": "as-dimanche",
+      "meta": {
+        "scenario": "AS",
+        "tag": "dimanche"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "17/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 486,
+      "expectedMajTotal": 77
+    },
+    {
+      "id": "as-ferie",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-nuit",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-nuit"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2026",
+          "TCallerheure": "23:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 587,
+      "expectedMajTotal": 173.25
+    },
+    {
+      "id": "ar-km-50",
+      "meta": {
+        "scenario": "AR",
+        "km": 50
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 50,
+            "duree": 3000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 50,
+            "duree": 3000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 263,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "ar-km-120",
+      "meta": {
+        "scenario": "AR",
+        "km": 120
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 490,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "ar-km-200",
+      "meta": {
+        "scenario": "AR",
+        "km": 200
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 809,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "ar-ferie",
+      "meta": {
+        "scenario": "AR",
+        "tag": "ferie"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "01/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 1011,
+      "expectedMajTotal": 192.5
+    },
+    {
+      "id": "mad-h-1",
+      "meta": {
+        "scenario": "MAD",
+        "h": 1
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "1"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 448,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "mad-h-3",
+      "meta": {
+        "scenario": "MAD",
+        "h": 3
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 616,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "mad-h-5",
+      "meta": {
+        "scenario": "MAD",
+        "h": 5
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "5"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 784,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-std-1h",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "std-1h"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "15/05/2026",
+          "HeureEvenement": "14:00",
+          "HeureMADEvenement": "1"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 200,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-std-3h",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "std-3h"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "15/05/2026",
+          "HeureEvenement": "14:00",
+          "HeureMADEvenement": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 240,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-std-5h",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "std-5h"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "15/05/2026",
+          "HeureEvenement": "14:00",
+          "HeureMADEvenement": "5"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 400,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-we",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "we"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "16/05/2026",
+          "HeureEvenement": "14:00",
+          "HeureMADEvenement": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 360,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-ferie",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "ferie"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "01/05/2026",
+          "HeureEvenement": "14:00",
+          "HeureMADEvenement": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 360,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-soir",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "soir"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "15/05/2026",
+          "HeureEvenement": "20:00",
+          "HeureMADEvenement": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 300,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "evt-nuit",
+      "meta": {
+        "scenario": "EVENEMENTIEL",
+        "tag": "nuit"
+      },
+      "type": "mad-evenementiel",
+      "body": {
+        "general": {
+          "TypeService": "MAD Evenementiel"
+        },
+        "madEvenementiel": {
+          "LieuEvenement": "76000 Rouen",
+          "DateEvenement": "15/05/2026",
+          "HeureEvenement": "23:00",
+          "HeureMADEvenement": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 0,
+            "duree": 0
+          },
+          "trajet": {
+            "km": 0,
+            "duree": 0
+          },
+          "retourBase": {
+            "km": 0,
+            "duree": 0
+          }
+        }
+      },
+      "expectedTarif": 300,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-ORY-80",
+      "meta": {
+        "scenario": "AERO",
+        "code": "ORY",
+        "km": 80
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Paris-Orly, 94390 Orly",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Paris-Orly, 94390 Orly"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 225,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-ORY-150",
+      "meta": {
+        "scenario": "AERO",
+        "code": "ORY",
+        "km": 150
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Paris-Orly, 94390 Orly",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Paris-Orly, 94390 Orly"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 225,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-CDG-80",
+      "meta": {
+        "scenario": "AERO",
+        "code": "CDG",
+        "km": 80
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport Charles de Gaulle, Roissy",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport Charles de Gaulle, Roissy"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 230,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-CDG-150",
+      "meta": {
+        "scenario": "AERO",
+        "code": "CDG",
+        "km": 150
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport Charles de Gaulle, Roissy",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport Charles de Gaulle, Roissy"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 230,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-BVA-80",
+      "meta": {
+        "scenario": "AERO",
+        "code": "BVA",
+        "km": 80
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Beauvais-Tillé",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Beauvais-Tillé"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 220,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-BVA-150",
+      "meta": {
+        "scenario": "AERO",
+        "code": "BVA",
+        "km": 150
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Beauvais-Tillé",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Beauvais-Tillé"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 220,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-CC-80",
+      "meta": {
+        "scenario": "AERO",
+        "code": "CC",
+        "km": 80
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Caen-Carpiquet",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Caen-Carpiquet"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 80,
+            "duree": 4800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 165,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-CC-150",
+      "meta": {
+        "scenario": "AERO",
+        "code": "CC",
+        "km": 150
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller Simple",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "10:00",
+          "TAallerdestination": "Aéroport de Caen-Carpiquet",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Caen-Carpiquet"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 165,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-5",
+      "meta": {
+        "scenario": "AS",
+        "km": 5,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 5,
+            "duree": 300
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 5,
+            "duree": 300
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 30,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-15",
+      "meta": {
+        "scenario": "AS",
+        "km": 15,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 15,
+            "duree": 900
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 15,
+            "duree": 900
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 38,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-35",
+      "meta": {
+        "scenario": "AS",
+        "km": 35,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 35,
+            "duree": 2100
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 35,
+            "duree": 2100
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 82,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-45",
+      "meta": {
+        "scenario": "AS",
+        "km": 45,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 45,
+            "duree": 2700
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 45,
+            "duree": 2700
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 140,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-70",
+      "meta": {
+        "scenario": "AS",
+        "km": 70,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 70,
+            "duree": 4200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 70,
+            "duree": 4200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 152,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-95",
+      "meta": {
+        "scenario": "AS",
+        "km": 95,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 95,
+            "duree": 5700
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 95,
+            "duree": 5700
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 186,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-140",
+      "meta": {
+        "scenario": "AS",
+        "km": 140,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 140,
+            "duree": 8400
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 140,
+            "duree": 8400
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 300,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-180",
+      "meta": {
+        "scenario": "AS",
+        "km": 180,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 180,
+            "duree": 10800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 180,
+            "duree": 10800
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 347,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-250",
+      "meta": {
+        "scenario": "AS",
+        "km": 250,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 250,
+            "duree": 15000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 250,
+            "duree": 15000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 431,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-400",
+      "meta": {
+        "scenario": "AS",
+        "km": 400,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 400,
+            "duree": 24000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 400,
+            "duree": 24000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 686,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-zone-km-500",
+      "meta": {
+        "scenario": "AS",
+        "km": 500,
+        "tag": "zone-grid"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "76100 Rouen",
+          "TCallerdate": "12/05/2026",
+          "TCallerheure": "11:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 500,
+            "duree": 30000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 500,
+            "duree": 30000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 856,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-hors-zone-paris",
+      "meta": {
+        "scenario": "AS",
+        "tag": "hors-zone"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "75001 Paris",
+          "TCallerDestination": "69001 Lyon",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 405,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "ar-nuit",
+      "meta": {
+        "scenario": "AR",
+        "tag": "ar-nuit"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "23:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 670,
+      "expectedMajTotal": 58
+    },
+    {
+      "id": "ar-soir",
+      "meta": {
+        "scenario": "AR",
+        "tag": "ar-soir"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "20:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 640,
+      "expectedMajTotal": 29
+    },
+    {
+      "id": "ar-dimanche",
+      "meta": {
+        "scenario": "AR",
+        "tag": "ar-dimanche"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller/Retour",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "17/05/2026",
+          "TCallerheure": "12:00",
+          "TCretourdate": "17/05/2026",
+          "TCretourheure": "18:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 150,
+            "duree": 9000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 731,
+      "expectedMajTotal": 116
+    },
+    {
+      "id": "air-ORY-ar-120",
+      "meta": {
+        "scenario": "AERO",
+        "code": "ORY",
+        "tag": "AR"
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller/Retour",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "08:00",
+          "TAallerdestination": "Aéroport de Paris-Orly, 94390 Orly",
+          "TAretourdate": "15/05/2026",
+          "TAretourhoraire": "18:00",
+          "TAretourdestination": "76000 Rouen",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport de Paris-Orly, 94390 Orly",
+        "AdresseDepart_2": "Aéroport de Paris-Orly, 94390 Orly"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 450,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "air-CDG-ar-120",
+      "meta": {
+        "scenario": "AERO",
+        "code": "CDG",
+        "tag": "AR"
+      },
+      "type": "aeroport",
+      "body": {
+        "general": {
+          "TypeService": "Transfert Aéroport"
+        },
+        "transfertAeroport": {
+          "TAtrajet": "Aller/Retour",
+          "TAallerdate": "15/05/2026",
+          "TAallerhoraire": "08:00",
+          "TAallerdestination": "Aéroport Charles de Gaulle, Roissy",
+          "TAretourdate": "15/05/2026",
+          "TAretourhoraire": "18:00",
+          "TAretourdestination": "76000 Rouen",
+          "TApassagers": "2"
+        },
+        "AdresseArrivee_1": "Aéroport Charles de Gaulle, Roissy",
+        "AdresseDepart_2": "Aéroport Charles de Gaulle, Roissy"
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 120,
+            "duree": 7200
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 460,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "mad-we",
+      "meta": {
+        "scenario": "MAD",
+        "tag": "mad-we"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "16/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "16/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 870,
+      "expectedMajTotal": 78
+    },
+    {
+      "id": "mad-ferie",
+      "meta": {
+        "scenario": "MAD",
+        "tag": "mad-ferie"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2026",
+          "TCallerheure": "10:00",
+          "TCretourdate": "01/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 890,
+      "expectedMajTotal": 97.5
+    },
+    {
+      "id": "mad-nuit",
+      "meta": {
+        "scenario": "MAD",
+        "tag": "mad-nuit"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "A/R + Mise à disposition",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "23:00",
+          "TCretourdate": "15/05/2026",
+          "TCretourheure": "18:00",
+          "HeureMADClassique": "3"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 100,
+            "duree": 6000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 766,
+      "expectedMajTotal": 39
+    },
+    {
+      "id": "as-extra-60",
+      "meta": {
+        "scenario": "AS",
+        "km": 60,
+        "tag": "extra"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75008 Paris",
+          "TCallerdate": "20/05/2026",
+          "TCallerheure": "09:30"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 60,
+            "duree": 3600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 60,
+            "duree": 3600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 140,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-extra-90",
+      "meta": {
+        "scenario": "AS",
+        "km": 90,
+        "tag": "extra"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75008 Paris",
+          "TCallerdate": "20/05/2026",
+          "TCallerheure": "09:30"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 90,
+            "duree": 5400
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 90,
+            "duree": 5400
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 204,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-extra-110",
+      "meta": {
+        "scenario": "AS",
+        "km": 110,
+        "tag": "extra"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75008 Paris",
+          "TCallerdate": "20/05/2026",
+          "TCallerheure": "09:30"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 110,
+            "duree": 6600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 110,
+            "duree": 6600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 225,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-extra-160",
+      "meta": {
+        "scenario": "AS",
+        "km": 160,
+        "tag": "extra"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75008 Paris",
+          "TCallerdate": "20/05/2026",
+          "TCallerheure": "09:30"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 160,
+            "duree": 9600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 160,
+            "duree": 9600
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 325,
+      "expectedMajTotal": 0
+    },
+    {
+      "id": "as-ferie-2027-0101",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2027-0101",
+        "year": "2027"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/01/2027",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2027-paques",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2027-paques",
+        "year": "2027"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "29/03/2027",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2027-0105",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2027-0105",
+        "year": "2027"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2027",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 587,
+      "expectedMajTotal": 173.25
+    },
+    {
+      "id": "as-ferie-2027-1407",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2027-1407",
+        "year": "2027"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "14/07/2027",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2027-2512",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2027-2512",
+        "year": "2027"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "25/12/2027",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 587,
+      "expectedMajTotal": 173.25
+    },
+    {
+      "id": "as-ferie-2028-0101",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2028-0101",
+        "year": "2028"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/01/2028",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 587,
+      "expectedMajTotal": 173.25
+    },
+    {
+      "id": "as-ferie-2028-paques",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2028-paques",
+        "year": "2028"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "17/04/2028",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2028-0105",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2028-0105",
+        "year": "2028"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "01/05/2028",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2028-1407",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2028-1407",
+        "year": "2028"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "14/07/2028",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "as-ferie-2028-2512",
+      "meta": {
+        "scenario": "AS",
+        "tag": "ferie-2028-2512",
+        "year": "2028"
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "25/12/2028",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "expectedTarif": 506,
+      "expectedMajTotal": 96.25
+    },
+    {
+      "id": "veh-fixed-50",
+      "meta": {
+        "scenario": "VEHICLE",
+        "id": "veh-fixed-50",
+        "mode": "fixed",
+        "value": 50
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "vehicle": {
+        "id": "golden-veh",
+        "name": "Classe V",
+        "surchargeMode": "fixed",
+        "surchargeValue": 50,
+        "passengerMax": 4
+      },
+      "expectedTarif": 455,
+      "expectedBase": 405
+    },
+    {
+      "id": "veh-per-km-05",
+      "meta": {
+        "scenario": "VEHICLE",
+        "id": "veh-per-km-05",
+        "mode": "per_km",
+        "value": 0.5
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "vehicle": {
+        "id": "golden-veh",
+        "name": "Classe V",
+        "surchargeMode": "per_km",
+        "surchargeValue": 0.5,
+        "passengerMax": 4
+      },
+      "expectedTarif": 510,
+      "expectedBase": 405
+    },
+    {
+      "id": "veh-pct-km-20",
+      "meta": {
+        "scenario": "VEHICLE",
+        "id": "veh-pct-km-20",
+        "mode": "percent_km",
+        "value": 20
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "vehicle": {
+        "id": "golden-veh",
+        "name": "Classe V",
+        "surchargeMode": "percent_km",
+        "surchargeValue": 20,
+        "passengerMax": 4
+      },
+      "expectedTarif": 486,
+      "expectedBase": 405
+    },
+    {
+      "id": "veh-none",
+      "meta": {
+        "scenario": "VEHICLE",
+        "id": "veh-none",
+        "mode": "none",
+        "value": 0
+      },
+      "type": "classique",
+      "body": {
+        "general": {
+          "TypeService": "Trajet Classique"
+        },
+        "trajetClassique": {
+          "TCtrajet": "Aller Simple",
+          "TCallerpriseencharge": "76000 Rouen",
+          "TCallerDestination": "75001 Paris",
+          "TCallerdate": "15/05/2026",
+          "TCallerheure": "12:00"
+        }
+      },
+      "distances": {
+        "aller": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        },
+        "retour": {
+          "approche": {
+            "km": 5,
+            "duree": 600
+          },
+          "trajet": {
+            "km": 200,
+            "duree": 12000
+          },
+          "retourBase": {
+            "km": 5,
+            "duree": 600
+          }
+        }
+      },
+      "vehicle": {
+        "id": "golden-veh",
+        "name": "Classe V",
+        "surchargeMode": "none",
+        "surchargeValue": 0,
+        "passengerMax": 4
+      },
+      "expectedTarif": 405,
+      "expectedBase": 405
+    }
+  ]
+}

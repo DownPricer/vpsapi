@@ -1,12 +1,19 @@
 import { DateTime } from "luxon";
 import type { TenantPricingEngineConfig } from "./engineTypes";
+import { isFrenchPublicHoliday } from "./frenchHolidays";
 import { airportCodeFromAddress, normalizeTCtrajet, normalizeTypeService } from "./utils";
 import type { CreneauResult, Distances } from "./types";
 
 const AR_MAD_CANON = "A/R + Mise à disposition";
 
+/**
+ * Jour férié = férié français calculé OU date exceptionnelle listée par le tenant (union).
+ * `dt` doit déjà être en fuseau métier (Europe/Paris) pour coller aux changements d'heure.
+ */
 export function isFerie(dt: DateTime, engine: TenantPricingEngineConfig): boolean {
-  return engine.publicHolidays.includes(dt.toFormat("dd/MM/yyyy"));
+  if (!dt.isValid) return false;
+  const key = dt.setZone(engine.timezone || "Europe/Paris").toFormat("dd/MM/yyyy");
+  return isFrenchPublicHoliday(key) || engine.publicHolidays.includes(key);
 }
 
 export function getAirportBuffers(code: string, engine: TenantPricingEngineConfig) {
