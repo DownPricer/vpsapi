@@ -2,6 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import { PricingConfigRequestError } from "../modules/pricing";
 import { QuoteService } from "../services/quote.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
+import {
+  isDistanceUnavailableError,
+  sendDistanceUnavailable,
+} from "../utils/distanceHttpError";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
 import { parseBody } from "../validation/parseBody";
 import { objectPayloadSchema } from "../validation/schemas";
@@ -29,6 +33,11 @@ export async function postDevis(req: Request, res: Response, next: NextFunction)
       ...(pricingDebug ? { pricingDebug } : {}),
     });
   } catch (e) {
+    if (isDistanceUnavailableError(e)) {
+      // Aucun lead créé : runPricingPipeline échoue avant insert. Voir rapport Passe 3 (proposition « tarif à confirmer »).
+      sendDistanceUnavailable(res, e);
+      return;
+    }
     if (e instanceof PricingConfigRequestError) {
       sendValidationError(
         res,

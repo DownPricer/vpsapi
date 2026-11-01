@@ -2,6 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import { PricingConfigRequestError } from "../modules/pricing";
 import { ReservationService } from "../services/reservation.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
+import {
+  isDistanceUnavailableError,
+  sendDistanceUnavailable,
+} from "../utils/distanceHttpError";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
 import { parseBody } from "../validation/parseBody";
 import { objectPayloadSchema } from "../validation/schemas";
@@ -33,6 +37,11 @@ export async function postReservation(
       ...(pricingDebug ? { pricingDebug } : {}),
     });
   } catch (e) {
+    if (isDistanceUnavailableError(e)) {
+      // Aucune réservation créée : le pipeline tarif échoue avant insert.
+      sendDistanceUnavailable(res, e);
+      return;
+    }
     if (e instanceof PricingConfigRequestError) {
       sendValidationError(
         res,

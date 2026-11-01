@@ -2,6 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import { PricingCalculationError, PricingConfigRequestError } from "../modules/pricing";
 import { PricingService } from "../services/pricing.service";
 import { sendSuccess, sendValidationError } from "../utils/apiResponse";
+import {
+  isDistanceUnavailableError,
+  sendDistanceUnavailable,
+} from "../utils/distanceHttpError";
 import { isPricingDebugAuthorized } from "../utils/pricingDebugAuth";
 import { parseBody } from "../validation/parseBody";
 import { objectPayloadSchema } from "../validation/schemas";
@@ -89,6 +93,28 @@ export async function postCalculerTarif(
         : {}),
     });
   } catch (e) {
+    if (isDistanceUnavailableError(e)) {
+      void trackFromRequest({
+        tenantId: req.tenantId,
+        observedDomain: req.tenantResolution?.observedDomain ?? null,
+        origin: req.tenantResolution?.origin ?? null,
+        type: "calculator_quote_failed",
+        category: "calculator",
+        reqIp: req.ip,
+        forwardedFor: typeof req.headers["x-forwarded-for"] === "string" ? req.headers["x-forwarded-for"] : undefined,
+        userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined,
+        path: "/api/calculer-tarif",
+        referrer: typeof req.headers.referer === "string" ? req.headers.referer : undefined,
+        metadata: {
+          serviceType: resolveServiceTypeKey(parsed.data) ?? "unknown",
+          reason: e.causeCode,
+          tenantResolution: req.tenantResolution?.source,
+          matchedDomain: req.tenantResolution?.matchedDomain,
+        },
+      });
+      sendDistanceUnavailable(res, e);
+      return;
+    }
     if (e instanceof PricingCalculationError) {
       sendValidationError(res, e.message);
       return;

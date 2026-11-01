@@ -131,21 +131,53 @@ describe("Étape 7 — pannes & charge", () => {
     }
   });
 
-  // BUG MAJEUR documenté dans le test suivant : getDistancesWithFallback avale l'erreur.
-  it.todo(
-    "Distance Matrix fail → HTTP >=400 (attendu) — actuellement faux tarif plancher via fallback 0 km"
-  );
-
-  it("repro figée : DM fail renvoie un tarif plancher (documente le bug)", async () => {
+  it("Distance Matrix fail (REQUEST_DENIED) → 503 DISTANCE_UNAVAILABLE, aucun tarif", async () => {
     restoreFetch();
     restoreFetch = installDistanceMatrixStub("fail");
     const res = await api("POST", "calculer-tarif", trip());
-    assert.equal(res.status, 200);
-    const data = res.json.data as Json;
-    assert.equal(res.json.success, true);
-    assert.ok((data.tarif as number) > 0, "faux tarif positif malgré DM fail");
-    const trajetKm = ((data.distances as Json)?.aller as Json)?.trajet as Json;
-    assert.equal(trajetKm?.km, 0);
+    assert.equal(res.status, 503);
+    assert.equal(res.json.success, false);
+    const err = res.json.error as Json;
+    assert.equal(err?.code, "DISTANCE_UNAVAILABLE");
+    assert.equal(typeof err?.message, "string");
+    assert.ok(!/REQUEST_DENIED|distancematrix|QA stub/i.test(String(err?.message)));
+    assert.equal(res.json.data, undefined);
+    restoreFetch();
+    restoreFetch = installDistanceMatrixStub("ok");
+  });
+
+  it("Distance Matrix NOT_FOUND → 422 ADDRESS_NOT_FOUND, aucun tarif", async () => {
+    restoreFetch();
+    restoreFetch = installDistanceMatrixStub("not_found");
+    const res = await api("POST", "calculer-tarif", trip());
+    assert.equal(res.status, 422);
+    assert.equal((res.json.error as Json)?.code, "ADDRESS_NOT_FOUND");
+    assert.equal(res.json.data, undefined);
+    restoreFetch();
+    restoreFetch = installDistanceMatrixStub("ok");
+  });
+
+  it("Distance Matrix réseau / HTTP 500 / quota → 503, aucun tarif", async () => {
+    for (const mode of ["network", "http_500", "quota"] as const) {
+      restoreFetch();
+      restoreFetch = installDistanceMatrixStub(mode);
+      const res = await api("POST", "calculer-tarif", trip());
+      assert.equal(res.status, 503, mode);
+      assert.equal((res.json.error as Json)?.code, "DISTANCE_UNAVAILABLE", mode);
+      assert.equal(res.json.data, undefined, mode);
+    }
+    restoreFetch();
+    restoreFetch = installDistanceMatrixStub("ok");
+  });
+
+  it("devis avec DM fail : pas de lead créé (pas de faux prix payable)", async () => {
+    restoreFetch();
+    restoreFetch = installDistanceMatrixStub("fail");
+    const before = await prisma.leadRequest.count({ where: { tenantId: TENANT } });
+    const res = await api("POST", "devis", trip());
+    assert.equal(res.status, 503);
+    const after = await prisma.leadRequest.count({ where: { tenantId: TENANT } });
+    assert.equal(after, before);
     restoreFetch();
     restoreFetch = installDistanceMatrixStub("ok");
   });

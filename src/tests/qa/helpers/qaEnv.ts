@@ -78,7 +78,13 @@ export function assertLocalTestDb(url = process.env.DATABASE_URL): void {
   }
 }
 
-export type DistanceStubMode = "ok" | "fail";
+export type DistanceStubMode =
+  | "ok"
+  | "fail"
+  | "http_500"
+  | "network"
+  | "not_found"
+  | "quota";
 
 /** Stub Distance Matrix via globalThis.fetch (aucun appel réseau réel). */
 export function installDistanceMatrixStub(mode: DistanceStubMode = "ok"): () => void {
@@ -90,10 +96,31 @@ export function installDistanceMatrixStub(mode: DistanceStubMode = "ok"): () => 
         : input
     );
     if (url.includes("api.distancematrix.ai")) {
-      if (mode === "fail") {
-        return new Response(JSON.stringify({ status: "REQUEST_DENIED", error_message: "QA stub fail" }), {
-          status: 200,
-        });
+      if (mode === "network") {
+        throw new TypeError("fetch failed: QA network stub");
+      }
+      if (mode === "http_500") {
+        return new Response("internal error", { status: 500 });
+      }
+      if (mode === "fail" || mode === "quota") {
+        return new Response(
+          JSON.stringify({
+            status: mode === "quota" ? "OVER_QUERY_LIMIT" : "REQUEST_DENIED",
+            error_message: "QA stub fail",
+          }),
+          { status: 200 }
+        );
+      }
+      if (mode === "not_found") {
+        const u = new URL(url);
+        const origins = decodeURIComponent(u.searchParams.get("origins") ?? "").split("|");
+        const dests = decodeURIComponent(u.searchParams.get("destinations") ?? "").split("|");
+        const rows = origins.map(() => ({
+          elements: dests.map(() => ({
+            status: "NOT_FOUND",
+          })),
+        }));
+        return new Response(JSON.stringify({ status: "OK", rows }), { status: 200 });
       }
       const u = new URL(url);
       const origins = decodeURIComponent(u.searchParams.get("origins") ?? "").split("|");
