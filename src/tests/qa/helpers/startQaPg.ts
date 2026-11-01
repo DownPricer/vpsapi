@@ -7,9 +7,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
 // embedded-postgres : résolution CommonJS (tsconfig moduleResolution=node)
-const require = createRequire(path.join(process.cwd(), "package.json"));
+const nodeRequire = createRequire(path.join(process.cwd(), "package.json"));
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const EmbeddedPostgres = require("embedded-postgres") as new (opts: Record<string, unknown>) => {
+const EmbeddedPostgres = nodeRequire("embedded-postgres") as new (opts: Record<string, unknown>) => {
   initialise(): Promise<void>;
   start(): Promise<void>;
   createDatabase(name: string): Promise<void>;
