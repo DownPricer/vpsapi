@@ -23,7 +23,10 @@ export function createTenantApiRouter(): Router {
   router.use("/devis", devisRoutes);
   router.use("/reservation", reservationRoutes);
   router.use("/contact", contactRoutes);
-  router.use("/debug", smtpDebugRoutes);
+  // Route debug SMTP : uniquement en développement ET drapeau explicite (sinon 404 via absence de montage).
+  if (process.env.NODE_ENV === "development" && process.env.ENABLE_DEBUG_SMTP === "1") {
+    router.use("/debug", smtpDebugRoutes);
+  }
   router.use("/requests", requireAuth, requestsRoutes);
   router.use("/dashboard", requireAuth, dashboardRoutes);
   router.use("/pro", requireAuth, proRoutes);

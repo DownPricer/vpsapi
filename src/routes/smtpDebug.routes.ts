@@ -12,7 +12,8 @@ export const smtpDebugRoutes = Router();
  * Permet de tester connexion/auth/envoi sans passer par les flux métier.
  */
 smtpDebugRoutes.post("/smtp-test", async (req, res, next) => {
-  if (process.env.NODE_ENV !== "development") {
+  // Garde-fou supplémentaire (le montage est déjà conditionnel dans routes/index.ts).
+  if (process.env.NODE_ENV !== "development" || process.env.ENABLE_DEBUG_SMTP !== "1") {
     return res.status(404).json({ error: "Not found" });
   }
 

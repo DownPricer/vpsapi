@@ -67,9 +67,43 @@ function replaceTemplateNames(node: unknown, commercialName: string, legalName: 
   return node;
 }
 
+const PLACEHOLDER_PATTERNS: Array<{ re: RegExp; label: string }> = [
+  { re: /À compléter/gi, label: "À compléter" },
+  { re: /Adresse à compléter/gi, label: "Adresse à compléter" },
+  { re: /\bExemple\b/gi, label: "Exemple" },
+  { re: /\bexemple\b/g, label: "exemple" },
+  { re: /\bexample\b/gi, label: "example" },
+  { re: /@example\./gi, label: "@example.*" },
+  { re: /example\.com/gi, label: "example.com" },
+];
+
+function collectPlaceholderHits(node: unknown, path = ""): string[] {
+  const hits: string[] = [];
+  if (typeof node === "string") {
+    for (const p of PLACEHOLDER_PATTERNS) {
+      if (p.re.test(node)) {
+        hits.push(path || "(racine)");
+        break;
+      }
+      p.re.lastIndex = 0;
+    }
+    return hits;
+  }
+  if (Array.isArray(node)) {
+    node.forEach((n, i) => hits.push(...collectPlaceholderHits(n, `${path}[${i}]`)));
+    return hits;
+  }
+  if (node && typeof node === "object") {
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      const next = path ? `${path}.${k}` : k;
+      hits.push(...collectPlaceholderHits(v, next));
+    }
+  }
+  return hits;
+}
+
 function countPlaceholders(node: unknown): number {
-  const text = JSON.stringify(node);
-  return (text.match(/Adresse à compléter|Exemple/g) ?? []).length;
+  return collectPlaceholderHits(node).length;
 }
 
 async function main(): Promise<void> {
@@ -123,10 +157,17 @@ async function main(): Promise<void> {
   settings.vehicles = emptyFleetSettings();
 
   const password = str(args, "password") || randomBytes(12).toString("base64url");
-  const remaining = countPlaceholders(settings);
+  const placeholderFields = collectPlaceholderHits(settings);
+  const remaining = placeholderFields.length;
 
   if (dryRun) {
     console.log(`Dry-run OK : tenant ${slug}, domaines ${domains.join(", ")}, ${remaining} placeholder(s) à remplacer.`);
+    if (remaining > 0) {
+      console.log("Champs concernés :");
+      for (const f of placeholderFields.slice(0, 40)) console.log(`  - ${f}`);
+      if (placeholderFields.length > 40) console.log(`  … +${placeholderFields.length - 40} autres`);
+      console.log("À remplir dans /pro/site avant la mise en ligne.");
+    }
     return;
   }
 
@@ -162,9 +203,22 @@ async function main(): Promise<void> {
   console.log(`Domaines actifs : ${domains.join(", ")}`);
   console.log(`Compte pro : ${email}`);
   if (remaining > 0) {
-    console.log(`À faire : ${remaining} texte(s) de démonstration restent dans les réglages (Exemple / Adresse à compléter) -> /pro/site.`);
+    console.log(`À faire : ${remaining} texte(s) de démonstration restent dans les réglages.`);
+    console.log("Champs concernés :");
+    for (const f of placeholderFields.slice(0, 40)) console.log(`  - ${f}`);
+    if (placeholderFields.length > 40) console.log(`  … +${placeholderFields.length - 40} autres`);
+    console.log("À remplir dans /pro/site avant la mise en ligne.");
   }
-  console.log(`__RESULT__ ${JSON.stringify({ tenantId: slug, domain: baseDomain, email, password, placeholders: remaining })}`);
+  console.log(
+    `__RESULT__ ${JSON.stringify({
+      tenantId: slug,
+      domain: baseDomain,
+      email,
+      password,
+      placeholders: remaining,
+      placeholderFields,
+    })}`
+  );
 }
 
 main()

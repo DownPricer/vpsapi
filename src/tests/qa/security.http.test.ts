@@ -413,8 +413,9 @@ httpSuite("QA sécurité HTTP (PostgreSQL + app Express)", () => {
   const PASS = "QaSecPassw0rd!";
 
   before(async () => {
-    // Dev pour route smtp-test ; production testé séparément via import dynamique du router.
+    // Dev + drapeau explicite pour monter POST /api/debug/smtp-test.
     process.env.NODE_ENV = "development";
+    process.env.ENABLE_DEBUG_SMTP = "1";
     prisma = (await import("../../db/prisma")).prisma;
     tokens = await import("../../modules/auth/tokens");
     const Auth = await import("../../services/auth.service");
@@ -485,18 +486,27 @@ httpSuite("QA sécurité HTTP (PostgreSQL + app Express)", () => {
     }
   });
 
-  it("POST /api/debug/smtp-test : production → 404", async () => {
-    const prev = process.env.NODE_ENV;
+  it("POST /api/debug/smtp-test : sans ENABLE_DEBUG_SMTP ou hors development → 404 (route absente)", async () => {
+    // Le montage est décidé à createApp() : une app sans drapeau ne expose pas la route.
+    const prevFlag = process.env.ENABLE_DEBUG_SMTP;
+    const prevEnv = process.env.NODE_ENV;
+    delete process.env.ENABLE_DEBUG_SMTP;
     process.env.NODE_ENV = "production";
+    let other: http.Server | undefined;
     try {
-      // Le router lit NODE_ENV à chaque requête
-      const res = await request(base, "POST", "/api/debug/smtp-test", {
+      const { createApp } = await import("../../app");
+      other = createApp().listen(0);
+      const otherBase = `http://127.0.0.1:${(other.address() as AddressInfo).port}`;
+      const res = await request(otherBase, "POST", "/api/debug/smtp-test", {
         headers: { "X-Tenant-ID": "default", "content-type": "application/json" },
         body: JSON.stringify({ to: "qa-mailpit@example.test" }),
       });
       assert.equal(res.status, 404);
     } finally {
-      process.env.NODE_ENV = prev;
+      process.env.NODE_ENV = prevEnv;
+      if (prevFlag === undefined) delete process.env.ENABLE_DEBUG_SMTP;
+      else process.env.ENABLE_DEBUG_SMTP = prevFlag;
+      await new Promise<void>((resolve) => (other ? other.close(() => resolve()) : resolve()));
     }
   });
 
