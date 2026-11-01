@@ -42,6 +42,21 @@ function userMessage(cause: DistanceUnavailableCause): string {
   return cause === "ADDRESS_NOT_FOUND" ? MSG_ADDRESS : MSG_PROVIDER;
 }
 
+async function emitDistanceUsageEvent(
+  usageContext: DistanceUsageContext | undefined,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  await trackPlatformEvent({
+    tenantId: usageContext?.tenantId ?? null,
+    observedDomain: usageContext?.observedDomain ?? null,
+    origin: usageContext?.origin ?? null,
+    type: "api_usage_distance_matrix",
+    category: "api_usage",
+    path: usageContext?.path ?? "/api/calculer-tarif",
+    metadata,
+  });
+}
+
 export async function getDistancesBatch(
   apiKey: string,
   origins: string[],
@@ -84,23 +99,15 @@ export async function getDistancesBatch(
           : "PROVIDER_ERROR";
       throw new DistanceUnavailableError(cause, userMessage(cause));
     }
-    void trackPlatformEvent({
-      tenantId: usageContext?.tenantId ?? null,
-      observedDomain: usageContext?.observedDomain ?? null,
-      origin: usageContext?.origin ?? null,
-      type: "api_usage_distance_matrix",
-      category: "api_usage",
-      path: usageContext?.path ?? "/api/calculer-tarif",
-      metadata: {
-        provider: "distancematrix.ai",
-        endpoint: "maps/api/distancematrix/json",
-        success: true,
-        status: data.status,
-        durationMs: Date.now() - startedAt,
-        originCount: origins.length,
-        destinationCount: destinations.length,
-        billableUnit: origins.length * destinations.length,
-      },
+    await emitDistanceUsageEvent(usageContext, {
+      provider: "distancematrix.ai",
+      endpoint: "maps/api/distancematrix/json",
+      success: true,
+      status: data.status,
+      durationMs: Date.now() - startedAt,
+      originCount: origins.length,
+      destinationCount: destinations.length,
+      billableUnit: origins.length * destinations.length,
     });
     const out: Record<string, DistanceResult> = {};
     if (data.rows) {
@@ -128,25 +135,17 @@ export async function getDistancesBatch(
     }
     return out;
   } catch (e) {
-    void trackPlatformEvent({
-      tenantId: usageContext?.tenantId ?? null,
-      observedDomain: usageContext?.observedDomain ?? null,
-      origin: usageContext?.origin ?? null,
-      type: "api_usage_distance_matrix",
-      category: "api_usage",
-      path: usageContext?.path ?? "/api/calculer-tarif",
-      metadata: {
-        provider: "distancematrix.ai",
-        endpoint: "maps/api/distancematrix/json",
-        success: false,
-        status: statusForEvent,
-        error: e instanceof Error ? e.message.slice(0, 160) : "DistanceMatrix error",
-        durationMs: Date.now() - startedAt,
-        originCount: origins.length,
-        destinationCount: destinations.length,
-        billableUnit: origins.length * destinations.length,
-        causeCode: e instanceof DistanceUnavailableError ? e.causeCode : undefined,
-      },
+    void emitDistanceUsageEvent(usageContext, {
+      provider: "distancematrix.ai",
+      endpoint: "maps/api/distancematrix/json",
+      success: false,
+      status: statusForEvent,
+      error: e instanceof Error ? e.message.slice(0, 160) : "DistanceMatrix error",
+      durationMs: Date.now() - startedAt,
+      originCount: origins.length,
+      destinationCount: destinations.length,
+      billableUnit: origins.length * destinations.length,
+      causeCode: e instanceof DistanceUnavailableError ? e.causeCode : undefined,
     });
     if (e instanceof DistanceUnavailableError) throw e;
     throw new DistanceUnavailableError("PROVIDER_ERROR", userMessage("PROVIDER_ERROR"));

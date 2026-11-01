@@ -1,7 +1,9 @@
 import { collectEncodingCorruptionPaths } from "../utils/tenantSettingsEncoding";
 
-const API = "https://api.sitereadyshd.fr";
-const TENANT = "default";
+const API = (process.env.RESTORE_API_URL ?? "https://api.sitereadyshd.fr").replace(/\/$/, "");
+const TENANT = process.env.RESTORE_TENANT_ID ?? "default";
+const EMAIL = process.env.RESTORE_EMAIL ?? process.env.SEED_OPERATOR_EMAIL ?? "";
+const PASSWORD = process.env.RESTORE_PASSWORD ?? process.env.SEED_OPERATOR_PASSWORD ?? "";
 
 function inspect(label: string, settings: Record<string, unknown> | null): void {
   const general = (settings?.general ?? {}) as Record<string, string>;
@@ -23,9 +25,18 @@ async function main(): Promise<void> {
 
   const login = await fetch(`${API}/api/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json; charset=utf-8", "X-Tenant-ID": TENANT },
-    body: JSON.stringify({ email: "admin@sitereadyshd.fr", password: "AdminTest2026!" }),
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "X-Tenant-ID": TENANT,
+      "X-Site-Domain": "vtc.sitereadyshd.fr",
+      Origin: "https://vtc.sitereadyshd.fr",
+    },
+    body: JSON.stringify({ email: EMAIL, password: PASSWORD }),
   }).then((r) => r.json());
+  if (!(login as { data?: { accessToken?: string } }).data?.accessToken) {
+    console.error("Login pro échoué pour inspect pro settings:", login);
+    return;
+  }
   const token = (login as { data: { accessToken: string } }).data.accessToken;
   const pro = await fetch(`${API}/api/pro/settings`, {
     headers: {

@@ -8,6 +8,7 @@
   },
   "vehicles": {
     "featured": {
+      "headline": "4 passagers max · Confort grand luxe",
       "highlightText": "4 passagers max · Climatisation · Sièges confortables · Bagages inclus",
       "paymentChips": ["CB", "Virement", "Espèces", "Chèque"],
       "gallery": [
@@ -21,6 +22,7 @@
     },
     "items": [
       {
+        "headline": "4 passagers max · Confort grand luxe",
         "highlightText": "4 passagers max · Climatisation · Sièges confortables · Bagages inclus",
         "paymentChips": ["CB", "Virement", "Espèces", "Chèque"],
         "gallery": [
