@@ -104,8 +104,39 @@ function sendRateLimited(res: Response, resetAt: number, now: number): void {
   });
 }
 
+type HitEntry = { count: number; resetAt: number };
+
+/** Tables en mémoire enregistrées pour purge périodique des entrées expirées. */
+const trackedHitMaps: Array<Map<string, HitEntry>> = [];
+
+export function purgeExpiredRateLimitEntries(now = Date.now()): number {
+  let removed = 0;
+  for (const hits of trackedHitMaps) {
+    hits.forEach((v, k) => {
+      if (v.resetAt <= now) {
+        hits.delete(k);
+        removed += 1;
+      }
+    });
+  }
+  return removed;
+}
+
+let purgeTimerStarted = false;
+function ensurePeriodicPurge(): void {
+  if (purgeTimerStarted) return;
+  purgeTimerStarted = true;
+  const timer = setInterval(() => {
+    purgeExpiredRateLimitEntries();
+  }, 60_000);
+  // Ne pas empêcher Node de quitter (tests / scripts).
+  if (typeof timer.unref === "function") timer.unref();
+}
+
 export function createRateLimiter(opts: RateLimiterOptions) {
-  const hits = new Map<string, { count: number; resetAt: number }>();
+  const hits = new Map<string, HitEntry>();
+  trackedHitMaps.push(hits);
+  ensurePeriodicPurge();
   const mode = opts.publicRateLimitMode ?? "trusted";
 
   return function rateLimit(req: Request, res: Response, next: NextFunction): void {
@@ -128,7 +159,9 @@ export function createRateLimiter(opts: RateLimiterOptions) {
 
     const now = Date.now();
     if (hits.size > 5000) {
-      for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
+      hits.forEach((v, k) => {
+        if (v.resetAt <= now) hits.delete(k);
+      });
     }
 
     const custom = opts.keyFrom?.(req);
@@ -159,6 +192,53 @@ export function createRateLimiter(opts: RateLimiterOptions) {
       return;
     }
     next();
+  };
+}
+
+/**
+ * Compteur d'échecs (ex. login par e-mail) : une réussite remet à zéro.
+ * N'incrémente que via `recordFailure`.
+ */
+export function createFailureCounter(opts: { windowMs: number; max: number; keyPrefix: string }) {
+  const hits = new Map<string, HitEntry>();
+  trackedHitMaps.push(hits);
+  ensurePeriodicPurge();
+
+  function keyOf(id: string): string {
+    return `${opts.keyPrefix}:${id}`;
+  }
+
+  return {
+    /** true si déjà au plafond (avant nouvel échec). */
+    isLimited(id: string, now = Date.now()): { limited: false } | { limited: true; retryAfterSec: number } {
+      const k = keyOf(id);
+      const entry = hits.get(k);
+      if (!entry || entry.resetAt <= now) return { limited: false };
+      if (entry.count >= opts.max) {
+        return { limited: true, retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)) };
+      }
+      return { limited: false };
+    },
+    recordFailure(id: string, now = Date.now()): { limited: false } | { limited: true; retryAfterSec: number } {
+      const k = keyOf(id);
+      const entry = hits.get(k);
+      if (!entry || entry.resetAt <= now) {
+        hits.set(k, { count: 1, resetAt: now + opts.windowMs });
+        return { limited: false };
+      }
+      entry.count += 1;
+      if (entry.count > opts.max) {
+        return { limited: true, retryAfterSec: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)) };
+      }
+      return { limited: false };
+    },
+    reset(id: string): void {
+      hits.delete(keyOf(id));
+    },
+    /** Tests / introspection. */
+    _size(): number {
+      return hits.size;
+    },
   };
 }
 

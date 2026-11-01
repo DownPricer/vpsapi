@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Request } from "express";
 import {
-  combineRateLimiters,
+  createFailureCounter,
   createRateLimiter,
   resolveTrustedProxyIp,
 } from "../middleware/rateLimit";
@@ -28,7 +28,7 @@ function loginEmail(req: { body?: { email?: unknown } }): string {
   return typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
 }
 
-/** Même stack que auth.routes (IP req.ip + plafond e-mail). */
+/** Stack IP (middleware) + plafond e-mail sur échecs seulement. */
 function buildLoginStack(opts?: { ipMax?: number; emailMax?: number }) {
   const ipMax = opts?.ipMax ?? 20;
   const emailMax = opts?.emailMax ?? 10;
@@ -38,17 +38,34 @@ function buildLoginStack(opts?: { ipMax?: number; emailMax?: number }) {
     key: "auth-login-ip",
     keyFrom: (req) => `auth-login-ip:${resolveTrustedProxyIp(req)}:${loginEmail(req) || "noemail"}`,
   });
-  const byEmail = createRateLimiter({
+  const emailFails = createFailureCounter({
     windowMs: 15 * 60 * 1000,
     max: emailMax,
-    key: "auth-login-email",
-    keyFrom: (req) => {
-      const email = loginEmail(req);
-      if (!email) return null;
-      return `auth-login-email:${email}`;
-    },
+    keyPrefix: "auth-login-email-fail-test",
   });
-  return combineRateLimiters(byIp, byEmail);
+  return function stack(req: Request, res: ReturnType<typeof mockRes>, next: () => void) {
+    byIp(req, res as never, (err?: unknown) => {
+      if (err) return;
+      if (res.code === 429) return;
+      const email = loginEmail(req);
+      if (email) {
+        const state = emailFails.isLimited(email);
+        if (state.limited) {
+          res.setHeader("Retry-After", String(state.retryAfterSec));
+          res.status(429).json();
+          return;
+        }
+        // Simule un échec de login pour le test plafond e-mail
+        const after = emailFails.recordFailure(email);
+        if (after.limited) {
+          res.setHeader("Retry-After", String(after.retryAfterSec));
+          res.status(429).json();
+          return;
+        }
+      }
+      next();
+    });
+  };
 }
 
 function spoofingReq(ip: string, email: string, spoofIp: string): Request {

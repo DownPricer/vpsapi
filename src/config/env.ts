@@ -105,6 +105,11 @@ export function loadEnv(): AppEnv {
   if (publicRateLimitRaw !== "off" && publicRateLimitRaw !== "trusted" && publicRateLimitRaw !== "strict") {
     throw new Error('PUBLIC_RATE_LIMIT doit être "off", "trusted" ou "strict".');
   }
+  if (publicRateLimitRaw === "strict" && (!bffRaw || bffRaw.length < 32)) {
+    throw new Error(
+      'PUBLIC_RATE_LIMIT=strict exige BFF_SHARED_SECRET (≥ 32 caractères). Définissez le secret partagé avec le BFF Next, ou utilisez PUBLIC_RATE_LIMIT=trusted|off.'
+    );
+  }
 
   return {
     nodeEnv,

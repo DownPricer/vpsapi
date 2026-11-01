@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { getAuthMe, postAuthLogin, postAuthLogout, postAuthRefresh } from "../controllers/auth.controller";
 import { requireAuth } from "../middleware/auth";
-import { combineRateLimiters, createRateLimiter, resolveTrustedProxyIp } from "../middleware/rateLimit";
+import { loginEmailFailures } from "../middleware/loginEmailFailures";
+import { createRateLimiter, resolveTrustedProxyIp } from "../middleware/rateLimit";
 
 export const authRoutes = Router();
 
@@ -17,19 +18,30 @@ const loginByIpEmail = createRateLimiter({
   keyFrom: (req) => `auth-login-ip:${resolveTrustedProxyIp(req)}:${loginEmail(req) || "noemail"}`,
 });
 
-/** Par e-mail seul : un attaquant multi-IP ne contourne pas le plafond du compte. */
-const loginByEmail = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  key: "auth-login-email",
-  keyFrom: (req) => {
-    const email = loginEmail(req);
-    if (!email) return null;
-    return `auth-login-email:${email}`;
-  },
-});
+/** Plafond e-mail : uniquement les échecs (voir postAuthLogin + loginEmailFailures). */
+function loginEmailFailureGate(
+  req: import("express").Request,
+  res: import("express").Response,
+  next: import("express").NextFunction
+): void {
+  const email = loginEmail(req);
+  if (!email) {
+    next();
+    return;
+  }
+  const state = loginEmailFailures.isLimited(email);
+  if (state.limited) {
+    res.setHeader("Retry-After", String(state.retryAfterSec));
+    res.status(429).json({
+      success: false,
+      error: { code: "RATE_LIMITED", message: "Trop de tentatives. Réessayez dans quelques minutes." },
+    });
+    return;
+  }
+  next();
+}
 
-authRoutes.post("/login", combineRateLimiters(loginByIpEmail, loginByEmail), postAuthLogin);
+authRoutes.post("/login", loginByIpEmail, loginEmailFailureGate, postAuthLogin);
 authRoutes.post("/refresh", postAuthRefresh);
 authRoutes.post("/logout", postAuthLogout);
 authRoutes.get("/me", requireAuth, getAuthMe);

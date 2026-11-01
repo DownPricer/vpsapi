@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import crypto from "crypto";
 import { z } from "zod";
 import { loadEnv } from "../config/env";
+import { loginEmailFailures } from "../middleware/loginEmailFailures";
 import { AuthService } from "../services/auth.service";
 import { trackFromRequest } from "../platform/telemetry.service";
 
@@ -54,6 +55,7 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
     return;
   }
 
+  const emailNorm = parsed.data.email.trim().toLowerCase();
   try {
     const emailHash = hashEmailForLogs(parsed.data.email);
     const result = await authService.login({
@@ -63,6 +65,7 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
       ip: req.ip,
       userAgent: req.headers["user-agent"],
     });
+    loginEmailFailures.reset(emailNorm);
     setRefreshCookie(res, result.refreshToken);
     void trackFromRequest({
       tenantId: req.tenantId,
@@ -86,6 +89,15 @@ export async function postAuthLogin(req: Request, res: Response, next: NextFunct
     });
     res.json({ success: true, data: { accessToken: result.accessToken, user: result.user } });
   } catch (e) {
+    const failState = loginEmailFailures.recordFailure(emailNorm);
+    if (failState.limited) {
+      res.setHeader("Retry-After", String(failState.retryAfterSec));
+      res.status(429).json({
+        success: false,
+        error: { code: "RATE_LIMITED", message: "Trop de tentatives. Réessayez dans quelques minutes." },
+      });
+      return;
+    }
     const message = e instanceof Error ? e.message : "Erreur login";
     const emailHash = hashEmailForLogs(parsed.data.email);
     console.warn("[auth:pro] login refused", {
